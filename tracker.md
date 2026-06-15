@@ -175,6 +175,44 @@ plus modified `app/{globals.css,layout.tsx,page.tsx}`, `CLAUDE.md`, `package*.js
 ## Changelog
 
 ### 2026-06-16
+- **Video upload + server-side compression, and pasted-URL link previews (feature branch `feat/video`).**
+  Built in a git worktree (`.claude/worktrees/video`) off the `773115b` baseline so it can later merge cleanly
+  alongside the parallel image work above. Two capabilities, deliberately split into separate files so they
+  only meet `document-editor.tsx` in small additive seams (keeps merge conflicts near-zero).
+  - **Compression decision (locked with user):** **H.264 / CRF 20 / preset slow**, long edge capped at
+    **1080p** (downscale-only), AAC 128k, `+faststart`. CRF is a *quality* target (not a fixed bitrate), so
+    quality stays near-identical to source while files shrink ~50–80%. Runs **server-side** via a native
+    `ffmpeg` binary (`ffmpeg-static` + `ffprobe-static`), NOT in the browser (too expensive client-side).
+  - **Why a storage PATH, not bytes, crosses the server action:** Next's `serverActions.bodySizeLimit`
+    defaults to **1 MB** (confirmed in bundled docs). So the **client uploads the raw file straight to
+    storage**, then calls the action with just the path. Flow: optimistic "Uploading…/Compressing…"
+    placeholder → upload raw to `‹uid›/‹docId›/‹id›-raw.‹ext›` → `compressVideo({rawPath,docId,id})` → server
+    downloads, transcodes in `/tmp`, probes dims/duration, extracts a poster frame, uploads `‹id›.mp4` +
+    `‹id›.jpg`, deletes the raw → client swaps the placeholder for a real `<video controls poster>`.
+  - **Files added:** `supabase/migrations/0004_create_doc_videos_bucket.sql` (public-read `doc-videos` bucket,
+    owner-scoped RLS mirroring 0003, 500 MB cap — **APPLIED to remote**, bucket + 4 policies verified);
+    `lib/video-actions.ts` (`"use server"` ffmpeg transcode); `lib/use-video-insert.ts` (client hook);
+    `app/doc/[docId]/video-toolbar.tsx` (align / caption / delete / resize); `lib/unfurl-actions.ts`
+    (`"use server"` OpenGraph/oEmbed + YouTube/Vimeo, SSRF host guards); `lib/use-link-preview.ts` (pasted-URL
+    → preview card, inline play-on-click via delegation so it survives reload); `lib/vendor.d.ts`;
+    `VideoFrameIcon` in `components/icons.tsx`.
+  - **Editor seams (`document-editor.tsx`, additive):** `imagePathsIn` → `mediaPathsIn` (images vs videos —
+    different buckets); `knownVideoPaths` + `selectedVideo`; save now serialises from a **clone** that strips
+    the selection ring AND in-progress placeholders (a still-compressing video / still-loading card is never
+    persisted); orphan cleanup sweeps **both** buckets; `onPaste` routes a lone URL to a preview; `onDrop`
+    accepts videos; `onEditorClick` handles preview play/open + video selection; toolbar gains a **Video** button.
+  - **Cleanup:** `actions.ts` `purgeDocImages` → **`purgeDocMedia`** (sweeps both buckets via
+    `purgeBucketPrefix`); called from `purgeDocument` + `emptyTrash`.
+  - **CSS:** `figure[data-video]` (align variants, native controls, ring), upload placeholder + spinner,
+    `figure[data-link-card]` unfurl cards (media, play overlay, inline iframe, clamped title/desc).
+  - **Config:** `serverExternalPackages: ["ffmpeg-static","ffprobe-static"]` in `next.config.ts`; deps added.
+  - **Verified:** `tsc` clean, `eslint` clean, `next build` succeeds; the exact ffmpeg encode/probe/poster
+    pipeline validated on landscape (4K→1080p), portrait (unchanged), and small (no upscale) clips.
+    **NOT yet runtime-tested in-app** (auth-gated — needs a login + a real upload).
+  - **Worktree notes:** worktrees carry no `node_modules`/`.env.local` (gitignored), so this one got its own
+    `npm install` + a copied `.env.local`. **Prod caveat:** `ffmpeg-static`+spawn suits local dev; Vercel
+    serverless would need a different transcode host — isolated behind `lib/video-actions.ts`. Preset `slow`
+    honored per the user's choice; flip `PRESET` to `"medium"` in `lib/video-actions.ts` if encodes feel slow.
 - **Image + toolbar refinements (round 2).**
   - **Image horizontal drag (fixed).** The HTML5-drag reposition never placed (contenteditable cancels it),
     so replaced it with **pointer-based horizontal dragging**: drag the image left/right → `translateX` on the

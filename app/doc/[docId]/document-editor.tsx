@@ -6,11 +6,15 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { compressImage } from "@/lib/compress-image";
 import { ImageToolbar } from "./image-toolbar";
+import { VideoToolbar } from "./video-toolbar";
+import { useVideoInsert, VIDEO_BUCKET, VIDEO_ACCEPT } from "@/lib/use-video-insert";
+import { useLinkPreview } from "@/lib/use-link-preview";
 import {
   ChecklistIcon,
   ImageFrameIcon,
   ListIcon,
   TextAlignIcon,
+  VideoFrameIcon,
 } from "@/components/icons";
 
 const IMAGE_BUCKET = "doc-images";
@@ -22,16 +26,28 @@ type Props = {
   initialHtml: string;
 };
 
-// Collect the storage paths of every image currently in the editor DOM. Each
-// inserted <img> carries its path in data-path, so this is just a query — the
-// basis for orphan cleanup (compare against what we knew at the last save).
-function imagePathsIn(root: HTMLElement | null): Set<string> {
-  const paths = new Set<string>();
+// Collect the storage paths of every media item currently in the editor DOM,
+// split by bucket. Images carry data-path on the <img>; videos carry data-path
+// (the mp4) + data-poster-path (the thumbnail) on the <video> — both live in the
+// doc-videos bucket. This query is the basis for orphan cleanup: compare against
+// what we knew at the last save to find what the user deleted.
+function mediaPathsIn(root: HTMLElement | null): {
+  images: Set<string>;
+  videos: Set<string>;
+} {
+  const images = new Set<string>();
+  const videos = new Set<string>();
   root?.querySelectorAll<HTMLImageElement>("img[data-path]").forEach((img) => {
     const p = img.getAttribute("data-path");
-    if (p) paths.add(p);
+    if (p) images.add(p);
   });
-  return paths;
+  root?.querySelectorAll<HTMLVideoElement>("video[data-path]").forEach((v) => {
+    const p = v.getAttribute("data-path");
+    const poster = v.getAttribute("data-poster-path");
+    if (p) videos.add(p);
+    if (poster) videos.add(poster);
+  });
+  return { images, videos };
 }
 
 type SaveState = "idle" | "saving" | "saved" | "error";
@@ -145,9 +161,12 @@ export function DocumentEditor({
   const titleRef = useRef(initialTitle); // latest title for save (avoids stale closure)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  // Storage paths referenced as of the last save. Diffing this against the live
-  // DOM on each save tells us which images the user deleted → delete from storage.
+  const videoInputRef = useRef<HTMLInputElement>(null);
+  // Storage paths referenced as of the last save. Diffing these against the live
+  // DOM on each save tells us which media the user deleted → delete from storage.
+  // Split by bucket because images and videos live in different buckets.
   const knownImagePaths = useRef<Set<string>>(new Set());
+  const knownVideoPaths = useRef<Set<string>>(new Set());
 
   const [title, setTitle] = useState(initialTitle);
   const [save, setSave] = useState<SaveState>("idle");
@@ -155,6 +174,7 @@ export function DocumentEditor({
   const [uploading, setUploading] = useState(false);
   const [active, setActive] = useState<ActiveMarks>(EMPTY_ACTIVE);
   const [selectedFigure, setSelectedFigure] = useState<HTMLElement | null>(null);
+  const [selectedVideo, setSelectedVideo] = useState<HTMLElement | null>(null);
 
   // ── Save (debounced ~1s) ──────────────────────────────────────────────
   // Reads the LATEST title (ref) + body HTML at fire time, so it never saves
@@ -164,23 +184,43 @@ export function DocumentEditor({
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(async () => {
       const editor = editorRef.current;
-      // Don't persist the transient selection ring class.
-      const ring = editor?.querySelector("figure[data-img].is-selected");
-      ring?.classList.remove("is-selected");
-      const html = editor?.innerHTML ?? "";
-      ring?.classList.add("is-selected");
 
-      // Orphan cleanup: any image we knew about that's no longer in the doc was
-      // deleted by the user → remove it from storage. RLS lets us delete only
-      // our own ‹uid›/… files. Best-effort (don't block or fail the save on it).
-      const current = imagePathsIn(editor);
-      const removed = [...knownImagePaths.current].filter(
-        (p) => !current.has(p),
-      );
-      if (removed.length) {
-        supabase.storage.from(IMAGE_BUCKET).remove(removed);
+      // Serialize from a clone so we can strip transient UI without touching the
+      // live editor: the selection ring, and any in-progress placeholders (a
+      // video still uploading/compressing, or a link card still loading) — those
+      // get persisted only once they resolve to a real <video>/finished card.
+      let html = "";
+      if (editor) {
+        const clone = editor.cloneNode(true) as HTMLElement;
+        clone
+          .querySelectorAll(".is-selected")
+          .forEach((n) => n.classList.remove("is-selected"));
+        clone
+          .querySelectorAll(
+            'figure[data-video][data-status], figure[data-link-card][data-status="loading"]',
+          )
+          .forEach((n) => n.remove());
+        html = clone.innerHTML;
       }
-      knownImagePaths.current = current;
+
+      // Orphan cleanup: any media we knew about that's no longer in the doc was
+      // deleted by the user → remove it from its bucket. RLS lets us delete only
+      // our own ‹uid›/… files. Best-effort (don't block or fail the save on it).
+      const current = mediaPathsIn(editor);
+      const removedImages = [...knownImagePaths.current].filter(
+        (p) => !current.images.has(p),
+      );
+      const removedVideos = [...knownVideoPaths.current].filter(
+        (p) => !current.videos.has(p),
+      );
+      if (removedImages.length) {
+        supabase.storage.from(IMAGE_BUCKET).remove(removedImages);
+      }
+      if (removedVideos.length) {
+        supabase.storage.from(VIDEO_BUCKET).remove(removedVideos);
+      }
+      knownImagePaths.current = current.images;
+      knownVideoPaths.current = current.videos;
 
       const { error } = await supabase
         .from("documents")
@@ -235,9 +275,11 @@ export function DocumentEditor({
   useEffect(() => {
     if (editorRef.current) {
       editorRef.current.innerHTML = initialHtml;
-      // Seed the known-image set from what the doc opened with, so later
+      // Seed the known-media sets from what the doc opened with, so later
       // deletions can be detected and cleaned out of storage.
-      knownImagePaths.current = imagePathsIn(editorRef.current);
+      const seed = mediaPathsIn(editorRef.current);
+      knownImagePaths.current = seed.images;
+      knownVideoPaths.current = seed.videos;
       try {
         document.execCommand("defaultParagraphSeparator", false, "p");
       } catch {
@@ -265,61 +307,6 @@ export function DocumentEditor({
     selectedFigure?.classList.add("is-selected");
   }, [selectedFigure]);
 
-  // Click inside the editor selects an image's figure; clicking a caption keeps
-  // the selection (so it stays editable); clicking elsewhere clears it.
-  const onEditorClick = useCallback(
-    (e: React.MouseEvent) => {
-      const target = e.target as HTMLElement;
-      // Toggle a checklist box.
-      const box = target.closest("[data-check]");
-      if (box) {
-        box.closest("li")?.toggleAttribute("data-checked");
-        scheduleSave();
-        return;
-      }
-      if (target.closest("figcaption")) return;
-      setSelectedFigure(target.closest("figure[data-img]") as HTMLElement | null);
-    },
-    [scheduleSave],
-  );
-
-  // Outside mousedown clears the selection — unless it lands on the floating
-  // image toolbar (data-image-overlay) or the selected figure itself.
-  useEffect(() => {
-    if (!selectedFigure) return;
-    function onDown(e: MouseEvent) {
-      const t = e.target as HTMLElement;
-      if (selectedFigure?.contains(t)) return;
-      if (t.closest("[data-image-overlay]")) return;
-      setSelectedFigure(null);
-    }
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
-  }, [selectedFigure]);
-
-  // ── Formatting commands ───────────────────────────────────────────────
-  // execCommand mutates the DOM (handling all the Selection/Range edge cases);
-  // we then re-read the HTML on save. Not the source of truth — just the tool.
-  const exec = useCallback(
-    (command: string, value?: string) => {
-      editorRef.current?.focus();
-      document.execCommand(command, false, value);
-      refreshActive();
-      scheduleSave();
-    },
-    [refreshActive, scheduleSave],
-  );
-
-  const toggleHeading = useCallback(
-    (level: number) => {
-      // Clicking the current heading level again returns to a normal paragraph.
-      const tag = active.heading === level ? "p" : `h${level}`;
-      exec("formatBlock", `<${tag}>`);
-    },
-    [active.heading, exec],
-  );
-
-  // ── Images ────────────────────────────────────────────────────────────
   // Insert a node at the current caret inside the editor; if the caret isn't in
   // the editor (e.g. focus went to the file dialog), append at the end instead.
   const insertNodeAtCaret = useCallback((node: Node) => {
@@ -347,6 +334,107 @@ export function DocumentEditor({
       sel?.addRange(after);
     }
   }, []);
+
+  // ── Video + link-preview features ─────────────────────────────────────
+  // Each lives in its own module and plugs in through these hooks; the editor
+  // only delegates to them from the paste/drop/click handlers below.
+  const { insertVideo, uploadingVideo } = useVideoInsert({
+    supabase,
+    userId,
+    docId,
+    insertNodeAtCaret,
+    scheduleSave,
+    knownVideoPaths,
+    onError: () => setSave("error"),
+  });
+  const { tryInsertLinkPreview, handlePreviewClick } = useLinkPreview({
+    insertNodeAtCaret,
+    scheduleSave,
+  });
+
+  // Click inside the editor selects an image's figure; clicking a caption keeps
+  // the selection (so it stays editable); clicking elsewhere clears it.
+  const onEditorClick = useCallback(
+    (e: React.MouseEvent) => {
+      const target = e.target as HTMLElement;
+      // Toggle a checklist box.
+      const box = target.closest("[data-check]");
+      if (box) {
+        box.closest("li")?.toggleAttribute("data-checked");
+        scheduleSave();
+        return;
+      }
+      // Link-preview cards: play (inline embed) or open in a new tab.
+      if (handlePreviewClick(e)) {
+        e.preventDefault();
+        return;
+      }
+      if (target.closest("figcaption")) return;
+      // Select an image or a video figure (clears the other). Clicking the video
+      // itself still drives its native controls — we don't preventDefault.
+      setSelectedFigure(target.closest("figure[data-img]") as HTMLElement | null);
+      setSelectedVideo(target.closest("figure[data-video]") as HTMLElement | null);
+    },
+    [scheduleSave, handlePreviewClick],
+  );
+
+  // Outside mousedown clears the selection — unless it lands on the floating
+  // image toolbar (data-image-overlay) or the selected figure itself.
+  useEffect(() => {
+    if (!selectedFigure) return;
+    function onDown(e: MouseEvent) {
+      const t = e.target as HTMLElement;
+      if (selectedFigure?.contains(t)) return;
+      if (t.closest("[data-image-overlay]")) return;
+      setSelectedFigure(null);
+    }
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [selectedFigure]);
+
+  // Same selection-ring + outside-click handling for the selected video figure.
+  useEffect(() => {
+    editorRef.current
+      ?.querySelectorAll("figure[data-video].is-selected")
+      .forEach((f) => {
+        if (f !== selectedVideo) f.classList.remove("is-selected");
+      });
+    selectedVideo?.classList.add("is-selected");
+  }, [selectedVideo]);
+
+  useEffect(() => {
+    if (!selectedVideo) return;
+    function onDown(e: MouseEvent) {
+      const t = e.target as HTMLElement;
+      if (selectedVideo?.contains(t)) return;
+      if (t.closest("[data-video-overlay]")) return;
+      setSelectedVideo(null);
+    }
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [selectedVideo]);
+
+  // ── Formatting commands ───────────────────────────────────────────────
+  // execCommand mutates the DOM (handling all the Selection/Range edge cases);
+  // we then re-read the HTML on save. Not the source of truth — just the tool.
+  const exec = useCallback(
+    (command: string, value?: string) => {
+      editorRef.current?.focus();
+      document.execCommand(command, false, value);
+      refreshActive();
+      scheduleSave();
+    },
+    [refreshActive, scheduleSave],
+  );
+
+  const toggleHeading = useCallback(
+    (level: number) => {
+      // Clicking the current heading level again returns to a normal paragraph.
+      const tag = active.heading === level ? "p" : `h${level}`;
+      exec("formatBlock", `<${tag}>`);
+    },
+    [active.heading, exec],
+  );
 
   // The single funnel for every insert path (button / paste / drop): compress
   // in the browser, upload to ‹uid›/‹docId›/‹id›.webp, then drop a block figure.
@@ -415,12 +503,17 @@ export function DocumentEditor({
         void insertImage(image);
         return;
       }
-      e.preventDefault();
       const text = e.clipboardData.getData("text/plain");
+      // A lone URL becomes a rich preview card; anything else pastes as plain text.
+      if (tryInsertLinkPreview(text)) {
+        e.preventDefault();
+        return;
+      }
+      e.preventDefault();
       document.execCommand("insertText", false, text);
       scheduleSave();
     },
-    [insertImage, scheduleSave],
+    [insertImage, tryInsertLinkPreview, scheduleSave],
   );
 
   // Caret range at a screen point, but only if it lands inside the editor.
@@ -491,11 +584,10 @@ export function DocumentEditor({
 
   const onDrop = useCallback(
     (e: React.DragEvent) => {
-      const files = e.dataTransfer?.files;
-      const images = files
-        ? Array.from(files).filter((f) => f.type.startsWith("image/"))
-        : [];
-      if (images.length === 0) return; // let the browser handle non-image drops
+      const all = e.dataTransfer?.files ? Array.from(e.dataTransfer.files) : [];
+      const images = all.filter((f) => f.type.startsWith("image/"));
+      const videos = all.filter((f) => f.type.startsWith("video/"));
+      if (images.length === 0 && videos.length === 0) return; // let the browser handle other drops
       e.preventDefault();
       const r = dropRangeAt(e.clientX, e.clientY);
       if (r) {
@@ -504,8 +596,9 @@ export function DocumentEditor({
         sel?.addRange(r);
       }
       images.forEach((f) => void insertImage(f));
+      videos.forEach((f) => void insertVideo(f));
     },
-    [dropRangeAt, insertImage],
+    [dropRangeAt, insertImage, insertVideo],
   );
 
   // ── Checklist ─────────────────────────────────────────────────────────
@@ -834,6 +927,34 @@ export function DocumentEditor({
               e.target.value = "";
             }}
           />
+
+          <button
+            type="button"
+            aria-label="Insert video"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => videoInputRef.current?.click()}
+            disabled={uploadingVideo}
+            className={`${btn(false)} gap-1.5 disabled:opacity-50`}
+          >
+            {uploadingVideo ? (
+              "Adding…"
+            ) : (
+              <>
+                <VideoFrameIcon className="h-6 w-6 opacity-80" /> Video
+              </>
+            )}
+          </button>
+          <input
+            ref={videoInputRef}
+            type="file"
+            accept={VIDEO_ACCEPT}
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) void insertVideo(f);
+              e.target.value = "";
+            }}
+          />
         </div>
 
         {/* Body — contenteditable rich text */}
@@ -867,6 +988,16 @@ export function DocumentEditor({
             docId={docId}
             onChange={scheduleSave}
             onClose={() => setSelectedFigure(null)}
+          />
+        )}
+
+        {/* Contextual video toolbar (floats over the selected video). */}
+        {selectedVideo && (
+          <VideoToolbar
+            figure={selectedVideo}
+            editorRef={editorRef}
+            onChange={scheduleSave}
+            onClose={() => setSelectedVideo(null)}
           />
         )}
       </div>

@@ -65,6 +65,38 @@ export function ImageFrameIcon({ className }: { className?: string }) {
   );
 }
 
+// Video glyph — a framed play triangle. Pairs with ImageFrameIcon on the
+// toolbar (same colorless, stroke-only language).
+export function VideoFrameIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden
+      className={className}
+    >
+      <rect
+        x="3"
+        y="5"
+        width="18"
+        height="14"
+        rx="2.5"
+        stroke="currentColor"
+        strokeWidth="1.6"
+      />
+      <path
+        d="M10 9.2 L15 12 L10 14.8 Z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 // List glyph — three rows marked with a roman "I", an "a", and a dot: signals
 // the list-type dropdown (numbered / lettered / bulleted).
 export function ListIcon({ className }: { className?: string }) {

@@ -16,24 +16,38 @@ async function requireUser() {
 }
 
 const DOC_IMAGES = "doc-images";
+const DOC_VIDEOS = "doc-videos";
 
-// Permanently remove every image a document stored. Images live under the
-// flat prefix  ‹uid›/‹docId›/…  so one list + one remove clears them all. Used
-// only on HARD delete (purge / empty trash) — soft delete keeps them for
-// restore. Best-effort: storage errors are swallowed so a stuck file can't
-// block the DB purge (a stray object is far less bad than an undeletable doc).
-async function purgeDocImages(
+// Remove every stored object under a bucket's  ‹uid›/‹docId›/…  prefix in one
+// list + one remove. Best-effort: storage errors are swallowed so a stuck file
+// can't block the DB purge (a stray object is far less bad than an undeletable
+// doc).
+async function purgeBucketPrefix(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  bucket: string,
+  prefix: string,
+) {
+  const { data: files } = await supabase.storage.from(bucket).list(prefix);
+  if (files && files.length > 0) {
+    await supabase.storage
+      .from(bucket)
+      .remove(files.map((f) => `${prefix}/${f.name}`));
+  }
+}
+
+// Permanently remove every image AND video a document stored. Both buckets use
+// the same flat  ‹uid›/‹docId›/…  layout. Used only on HARD delete (purge /
+// empty trash) — soft delete keeps media for restore.
+async function purgeDocMedia(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
   docId: string,
 ) {
   const prefix = `${userId}/${docId}`;
-  const { data: files } = await supabase.storage.from(DOC_IMAGES).list(prefix);
-  if (files && files.length > 0) {
-    await supabase.storage
-      .from(DOC_IMAGES)
-      .remove(files.map((f) => `${prefix}/${f.name}`));
-  }
+  await Promise.all([
+    purgeBucketPrefix(supabase, DOC_IMAGES, prefix),
+    purgeBucketPrefix(supabase, DOC_VIDEOS, prefix),
+  ]);
 }
 
 // ── Documents ────────────────────────────────────────────────────────────
@@ -96,8 +110,8 @@ export async function restoreDocument(documentId: string) {
 // removed automatically by the `on delete cascade` FK in migration 0002.
 export async function purgeDocument(documentId: string) {
   const { supabase, user } = await requireUser();
-  // Sweep its images from storage first, so we never orphan files.
-  await purgeDocImages(supabase, user.id, documentId);
+  // Sweep its images + videos from storage first, so we never orphan files.
+  await purgeDocMedia(supabase, user.id, documentId);
   const { error } = await supabase
     .from("documents")
     .delete()
@@ -207,13 +221,13 @@ export async function purgeFolder(folderId: string) {
 // and folders for this user). RLS scopes the deletes to the current user.
 export async function emptyTrash() {
   const { supabase, user } = await requireUser();
-  // Find the docs about to be purged so we can clear their images from storage.
+  // Find the docs about to be purged so we can clear their media from storage.
   const { data: deadDocs } = await supabase
     .from("documents")
     .select("id")
     .not("deleted_at", "is", null);
   for (const d of deadDocs ?? []) {
-    await purgeDocImages(supabase, user.id, d.id);
+    await purgeDocMedia(supabase, user.id, d.id);
   }
   const [{ error: docErr }, { error: folderErr }] = await Promise.all([
     supabase.from("documents").delete().not("deleted_at", "is", null),
