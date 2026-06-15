@@ -1,26 +1,275 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Core palette — warm paper & ink, with the egg-yolk accent (PRD §9). */
+  --paper: #faf4e8;
+  --paper-deep: #f1e7d3;
+  --ink: #211c14;
+  --ink-soft: #6b6051;
+  --line: #e0d4bc;
+  --yolk: #ffb300;
+  --yolk-deep: #e89c00;
+
+  --background: var(--paper);
+  --foreground: var(--ink);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-paper: var(--paper);
+  --color-paper-deep: var(--paper-deep);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-line: var(--line);
+  --color-yolk: var(--yolk);
+  --color-yolk-deep: var(--yolk-deep);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Subtle paper grain so the cream background has tooth, not flatness. */
+.grain::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.5;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E");
+}
+
+/* Staggered entrance — one orchestrated page-load reveal. */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.rise {
+  opacity: 0;
+  animation: rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+}
+
+/* Profile-picture viewer (lightbox) — fluid open/close.
+   The backdrop fades; the picture pops in with a slight scale-up, and
+   reverses on close. Two directions = two keyframe pairs so the exit
+   reads as a deliberate retreat, not a rewind of the entrance. */
+@keyframes viewer-overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes viewer-overlay-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+@keyframes viewer-pic-in {
+  from { opacity: 0; transform: scale(0.82); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes viewer-pic-out {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(0.9); }
+}
+
+.viewer-overlay-in { animation: viewer-overlay-in 0.28s ease forwards; }
+.viewer-overlay-out { animation: viewer-overlay-out 0.24s ease forwards; }
+.viewer-pic-in { animation: viewer-pic-in 0.34s cubic-bezier(0.2, 0.7, 0.2, 1) forwards; }
+.viewer-pic-out { animation: viewer-pic-out 0.24s cubic-bezier(0.4, 0, 1, 1) forwards; }
+
+/* Document editor body (contenteditable). Tailwind's preflight strips heading
+   and list styling, so we restore it here scoped to the editor content. */
+.doc-content {
+  font-size: 1.125rem;
+  line-height: 1.75;
+}
+.doc-content:focus {
+  outline: none;
+}
+.doc-content p {
+  margin: 0 0 0.75rem;
+}
+.doc-content h1,
+.doc-content h2,
+.doc-content h3,
+.doc-content h4,
+.doc-content h5 {
+  font-family: var(--font-display), serif;
+  font-weight: 600;
+  line-height: 1.15;
+  margin: 1.4rem 0 0.6rem;
+}
+.doc-content h1 { font-size: 2.5rem; }
+.doc-content h2 { font-size: 2rem; }
+.doc-content h3 { font-size: 1.6rem; }
+.doc-content h4 { font-size: 1.3rem; }
+.doc-content h5 { font-size: 1.1rem; letter-spacing: 0.01em; }
+.doc-content ul {
+  list-style: disc;
+  padding-left: 1.6rem;
+  margin: 0 0 0.75rem;
+}
+.doc-content ol {
+  list-style: decimal;
+  padding-left: 1.6rem;
+  margin: 0 0 0.75rem;
+}
+.doc-content li {
+  margin: 0.15rem 0;
+}
+/* Inserted images — block elements, so text only ever flows above and below
+   them (never beside). The figure is contenteditable=false; its width (set
+   inline by the resize handle) and alignment (data-align) are saved in the HTML.
+   Default width if none set = 65% so freshly-inserted images aren't huge. */
+.doc-content figure[data-img] {
+  width: 65%;
+  max-width: 100%;
+  margin: 1.5rem auto; /* centered by default */
+}
+.doc-content figure[data-img][data-align="left"] {
+  margin-left: 0;
+  margin-right: auto;
+}
+.doc-content figure[data-img][data-align="center"] {
+  margin-left: auto;
+  margin-right: auto;
+}
+.doc-content figure[data-img][data-align="right"] {
+  margin-left: auto;
+  margin-right: 0;
+}
+.doc-content figure[data-img] img {
+  display: block;
+  width: 100%; /* fill the figure; the figure carries the real width */
+  height: auto;
+  border-radius: 0.5rem; /* default; the toolbar slider sets an inline override */
+}
+/* Flips (horizontal / vertical / both) — non-destructive CSS transforms. */
+.doc-content figure[data-img] img[data-flip-h="1"] {
+  transform: scaleX(-1);
+}
+.doc-content figure[data-img] img[data-flip-v="1"] {
+  transform: scaleY(-1);
+}
+.doc-content figure[data-img] img[data-flip-h="1"][data-flip-v="1"] {
+  transform: scale(-1, -1);
+}
+/* Filters — non-destructive CSS filters. */
+.doc-content figure[data-img] img[data-filter="grayscale"] {
+  filter: grayscale(1);
+}
+.doc-content figure[data-img] img[data-filter="sepia"] {
+  filter: sepia(0.7);
+}
+.doc-content figure[data-img] img[data-filter="contrast"] {
+  filter: contrast(1.4);
+}
+/* Caption — an editable figcaption under the image. */
+.doc-content figure[data-img] figcaption {
+  margin-top: 0.5rem;
+  text-align: center;
+  font-size: 0.875rem;
+  font-style: italic;
+  color: color-mix(in srgb, var(--ink) 60%, transparent);
+  outline: none;
+}
+.doc-content figure[data-img] figcaption:empty::before {
+  content: "Add a caption…";
+  color: color-mix(in srgb, var(--ink) 30%, transparent);
+}
+/* Selection ring while an image is active in the editor. */
+.doc-content figure[data-img].is-selected img {
+  outline: 2px solid var(--yolk-deep, #c98a00);
+  outline-offset: 2px;
+}
+/* Drag the image left/right to set its horizontal position. */
+.doc-content figure[data-img] img {
+  cursor: grab;
+}
+.doc-content figure[data-img].is-dragging img {
+  cursor: grabbing;
+}
+
+/* Checklist (a list type in the toolbar). The box is a clickable square; when
+   its <li> is checked, a tick overshoots the top-right corner. */
+.doc-content ul[data-checklist] {
+  list-style: none;
+  padding-left: 0.25rem;
+  margin: 0 0 0.75rem;
+}
+.doc-content ul[data-checklist] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  margin: 0.2rem 0;
+}
+.doc-content ul[data-checklist] [data-check] {
+  flex: 0 0 auto;
+  margin-top: 0.18em;
+  width: 1.05em;
+  height: 1.05em;
+  border: 2px solid var(--ink);
+  border-radius: 0.28rem;
+  position: relative;
+  cursor: pointer;
+}
+.doc-content ul[data-checklist] li[data-checked] [data-check]::after {
+  content: "";
+  position: absolute;
+  left: 0.2em;
+  top: -0.22em; /* overshoots the square's top edge */
+  width: 0.5em;
+  height: 0.9em;
+  border: solid var(--yolk-deep);
+  border-width: 0 0.2em 0.2em 0;
+  transform: rotate(45deg);
+}
+.doc-content ul[data-checklist] li[data-checked] {
+  color: var(--ink-soft);
+  text-decoration: line-through;
+}
+
+/* Fade used when the rounding slider replaces the "Round" label. */
+@keyframes tool-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.tool-fade-in {
+  animation: tool-fade-in 160ms ease-out;
+}
+
+/* Placeholder shown when the editor is empty. */
+.doc-content:empty::before {
+  content: attr(data-placeholder);
+  color: color-mix(in srgb, var(--ink) 25%, transparent);
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise {
+    animation: none;
+    opacity: 1;
+  }
+  .viewer-overlay-in,
+  .viewer-overlay-out,
+  .viewer-pic-in,
+  .viewer-pic-out {
+    animation: none;
+  }
 }

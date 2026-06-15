@@ -39,3 +39,13 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+#learning instruments
+LEARNING.md
+OVERVIEW.md
+
+# playwright MCP scratch (screenshots, console logs from testing)
+.playwright-mcp/
+
+# machine-local Claude Code settings (permission allowlist, etc.)
+.claude/settings.local.json
