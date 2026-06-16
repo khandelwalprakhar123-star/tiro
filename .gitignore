@@ -49,3 +49,6 @@ OVERVIEW.md
 
 # machine-local Claude Code settings (permission allowlist, etc.)
 .claude/settings.local.json
+
+# git worktrees created for parallel feature work (full checkouts, never commit)
+.claude/worktrees/
