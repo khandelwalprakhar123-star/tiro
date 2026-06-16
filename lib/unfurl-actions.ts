@@ -22,7 +22,7 @@ export type LinkPreview = {
 };
 
 const UA =
-  "Mozilla/5.0 (compatible; DeeScribeBot/1.0; +https://deescribe.local) preview-fetch";
+  "Mozilla/5.0 (compatible; TiroBot/1.0; +https://tiro.works) preview-fetch";
 const FETCH_TIMEOUT_MS = 6000;
 const MAX_HTML_BYTES = 512 * 1024; // only need the <head>; cap the read
 

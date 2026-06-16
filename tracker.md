@@ -1,4 +1,8 @@
-# DeeScribe — Change Tracker
+# Tiro — Change Tracker
+
+> **Rebrand note (2026-06-16):** the product was renamed **DeeScribe → Tiro** (domain `tiro.works`).
+> Historical changelog entries below predate the rename and still say "DeeScribe" — that's intentional
+> (the log is not rewritten). "DeeScribe" and "Tiro" refer to the same product.
 
 > **Purpose.** This file is the running log of everything we build, change, or remove. It exists so that
 > any agent (or human) can get up to speed on the project state *fast* without re-reading the whole
@@ -16,8 +20,9 @@
 
 ## Current state (snapshot)
 
-**Product:** DeeScribe — a multimodal document editor (Next.js + Supabase). See `prd.md` (living spec) and
-`prd-vision.md` (full reference vision).
+**Product:** Tiro — a multimodal document editor (Next.js + Supabase). Named after Marcus Tullius Tiro
+(Cicero's scribe, inventor of shorthand). Domain: **`tiro.works`** (registrar: GoDaddy). See `prd.md`
+(living spec) and `prd-vision.md` (full reference vision).
 
 **Stack in place:**
 - Next.js **16.2.9** (App Router) + React 19 + TypeScript + Turbopack
@@ -175,6 +180,21 @@ plus modified `app/{globals.css,layout.tsx,page.tsx}`, `CLAUDE.md`, `package*.js
 ## Changelog
 
 ### 2026-06-16
+- **Rebrand: DeeScribe → Tiro** (domain `tiro.works`, bought on GoDaddy). Named after Marcus Tullius Tiro.
+  - **GitHub repo renamed** `deescribe` → `tiro` via `gh repo rename` — remote `origin` is now
+    `https://github.com/khandelwalprakhar123-star/tiro.git` (local remote auto-rewritten; old URL redirects).
+  - **UI/code rebrand** (done by a parallel subagent): user-facing wordmark + page title + profile copy
+    `DeeScribe` → `Tiro` across `app/layout.tsx`, `app/login/page.tsx`, `app/workspace/page.tsx`,
+    `app/trash/page.tsx`, `app/profile/page.tsx`. Internal: unfurl UA → `TiroBot/1.0; +https://tiro.works`
+    (`lib/unfurl-actions.ts`), video temp-dir prefix → `tiro-vid-` (`lib/video-actions.ts`). Drag MIME
+    `application/x-deescribe` → `application/x-tiro` at all 3 sites (`document-card.tsx` set;
+    `folder-card.tsx` read + set) — drag-to-file/nest stays consistent. `tsc` + `eslint` clean.
+  - **Pending (user dashboard actions):** rename Vercel project `deescribe` → `tiro`
+    (`prj_pIAhrkoEZeAZM1anMUc4xEivici7`, team `team_J9JnarR91YdIOg9pFbn81po3`); rename Supabase project
+    display name `DeeScribe` → `tiro` (cosmetic only — ref `rgryvohgicykwuxnwnhe`/URL/keys unchanged);
+    attach `tiro.works` in Vercel Domains + add A(`@`)/CNAME(`www`) records at GoDaddy.
+  - **Not changed:** local dir name (`texteditor`), Supabase ref/URL, env vars, storage bucket names,
+    migrations.
 - **Video upload + server-side compression, and pasted-URL link previews (feature branch `feat/video`).**
   Built in a git worktree (`.claude/worktrees/video`) off the `773115b` baseline so it can later merge cleanly
   alongside the parallel image work above. Two capabilities, deliberately split into separate files so they

@@ -73,7 +73,7 @@ export default function LoginPage() {
         <section className="rise" style={{ animationDelay: "0.05s" }}>
           <p className="mb-5 inline-flex items-center gap-2 text-xs font-medium uppercase tracking-[0.3em] text-ink-soft">
             <span className="h-px w-8 bg-yolk-deep" />
-            DeeScribe
+            Tiro
           </p>
           <h1
             className="font-display text-5xl leading-[0.95] tracking-tight text-ink sm:text-6xl lg:text-7xl"

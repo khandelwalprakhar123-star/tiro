@@ -73,7 +73,7 @@ export default async function WorkspacePage() {
           </div>
           <p className="inline-flex items-center gap-2 text-xs font-medium uppercase tracking-[0.3em] text-ink-soft">
             <span className="h-px w-8 bg-yolk-deep" />
-            DeeScribe
+            Tiro
           </p>
         </header>
 

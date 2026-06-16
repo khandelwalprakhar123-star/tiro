@@ -59,7 +59,7 @@ export function FolderCard({ folder, docCount }: Props) {
   async function handleDrop(e: React.DragEvent) {
     e.preventDefault();
     setOver(false);
-    const raw = e.dataTransfer.getData("application/x-deescribe");
+    const raw = e.dataTransfer.getData("application/x-tiro");
     if (!raw) return;
     let payload: DragPayload;
     try {
@@ -86,7 +86,7 @@ export function FolderCard({ folder, docCount }: Props) {
       draggable
       onDragStart={(e) => {
         e.dataTransfer.setData(
-          "application/x-deescribe",
+          "application/x-tiro",
           JSON.stringify({ type: "folder", id: folder.id }),
         );
         e.dataTransfer.effectAllowed = "copy";

@@ -113,7 +113,7 @@ export async function compressVideo(input: {
     .download(rawPath);
   if (dlErr || !blob) throw new Error(`Could not read raw video: ${dlErr?.message}`);
 
-  const dir = await mkdtemp(join(tmpdir(), "deescribe-vid-"));
+  const dir = await mkdtemp(join(tmpdir(), "tiro-vid-"));
   const rawFile = join(dir, "raw");
   const outFile = join(dir, "out.mp4");
   const posterFile = join(dir, "poster.jpg");

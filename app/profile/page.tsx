@@ -44,7 +44,7 @@ export default async function ProfilePage() {
             Your profile
           </h1>
           <p className="mt-3 text-ink-soft">
-            How you appear across DeeScribe.
+            How you appear across Tiro.
           </p>
         </section>
 

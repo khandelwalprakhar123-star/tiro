@@ -16,7 +16,7 @@ const hanken = Hanken_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "DeeScribe — write with everything",
+  title: "Tiro — write with everything",
   description:
     "A multimodal document editor where writing, media, and publishing live in one place.",
 };

@@ -80,7 +80,7 @@ export function DocumentCard({
       draggable
       onDragStart={(e) => {
         e.dataTransfer.setData(
-          "application/x-deescribe",
+          "application/x-tiro",
           JSON.stringify({ type: "doc", id: doc.id }),
         );
         e.dataTransfer.effectAllowed = "copy";
