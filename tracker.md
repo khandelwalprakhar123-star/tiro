@@ -73,11 +73,19 @@ mid-session ban/delete until token expiry (~1 h) — **not done** (left as the a
   rows rendering with real data (`/doc/[id]` and `/folders/[id]` serve actual content). Run via the
   dashboard SQL editor (MCP schema writes denied); both files are safe to re-run (IF NOT EXISTS /
   drop-then-create).
+- **Doc-media storage buckets** — all public-read, owner-scoped write RLS, flat `‹uid›/‹docId›/…` layout
+  (so a doc purge sweeps its media in one prefix list+remove): **`doc-images`** (0003), **`doc-videos`**
+  (0004), **`doc-audio`** (0005). All **APPLIED** to remote. The shared `‹uid›/‹docId›/` scheme is what
+  lets `purgeDocMedia` clean all three at once.
 
-**Git state (2026-06-15):** the repo has a single commit — `38da79c Initial commit from Create Next App`.
-The **entire DeeScribe app is uncommitted** (working tree): all of `app/{auth,doc,folders,login,profile,
-trash,workspace}`, `components/`, `lib/`, `proxy.ts`, `supabase/`, the PRDs and this tracker are untracked,
-plus modified `app/{globals.css,layout.tsx,page.tsx}`, `CLAUDE.md`, `package*.json`. No real commit yet.
+**Git state (2026-06-17):** the app is committed and **auto-deploys to `tiro.works`** (Vercel watches
+GitHub `main`; pushes by a GitHub-recognized author build live in ~1–2 min — commits authored as the
+machine hostname get `BLOCKED`, see the rebrand/deploy notes). Latest commit **`76aeceb`** (Backspace-
+delete + undoable media delete); audio feature shipped in `8ee90b2`. A few **local-only stragglers stay
+uncommitted on purpose**: `supabase/config.toml` + `supabase/templates/` (email-template work) and
+`HANDOFF-video.md` (scratch handoff for the parallel video-hardening session). The **video-hardening
+work** lives on branch `feat/video` in worktree `.claude/worktrees/video` (separate session; see
+`HANDOFF-video.md`).
 
 ---
 
@@ -91,14 +99,14 @@ plus modified `app/{globals.css,layout.tsx,page.tsx}`, `CLAUDE.md`, `package*.js
 | `proxy.ts` | Per-request gate (Next 16 renamed `middleware`→`proxy`). Authoritative `getUser()` (refresh + revalidate) + redirects logged-out users off non-public routes to `/login`. `matcher` excludes static assets. |
 | `lib/supabase/client.ts` | Browser Supabase client (`createBrowserClient`). |
 | `lib/supabase/server.ts` | Server Supabase client (`createServerClient`, async cookies; `setAll` swallowed in RSC). |
-| `components/icons.tsx` | `FileIcon` (document glyph) + `FolderIcon` (folder-tab glyph) — kept visually distinct. |
+| `components/icons.tsx` | Stroke-only toolbar/UI glyphs: `FileIcon`, `FolderIcon`, `ImageFrameIcon`, `VideoFrameIcon` (clapperboard), `AudioFrameIcon` (waveform), `PlusIcon` (Insert trigger), `ListIcon`, `TextAlignIcon`, `ChecklistIcon`, `AlignIcon`, `TrashIcon`. |
 | `components/profile-avatar-link.tsx` | Async server component: circular avatar (initial fallback) linking to `/profile`. Self-contained (reads user + profile via `getUser`). Used top-left in the doc editor. |
 
 **Auth + shell**
 | Path | Purpose |
 |---|---|
 | `app/layout.tsx` | Root layout; loads Fraunces + Hanken Grotesk; app metadata. |
-| `app/globals.css` | Design tokens (yolk palette, paper/ink), grain texture, `rise` load animation, `.doc-content` editor styles, profile-picture viewer animations (`viewer-overlay-in/out`, `viewer-pic-in/out`). |
+| `app/globals.css` | Design tokens (yolk palette, paper/ink), grain texture, `rise` load animation, `.doc-content` editor styles, media-figure styles (`figure[data-img|data-video|data-audio|data-link-card]` incl. the audio waveform player + `--played` clip-path fill), profile-picture viewer animations. |
 | `app/page.tsx` | Root — `getClaims()` → redirect to `/workspace` (logged in) or `/login`. |
 | `app/login/page.tsx` | Two-stage email-OTP login + "Continue with Google". |
 | `app/auth/callback/route.ts` | OAuth return handler (`exchangeCodeForSession` → redirect to `next`/`/workspace`). |
@@ -119,9 +127,20 @@ plus modified `app/{globals.css,layout.tsx,page.tsx}`, `CLAUDE.md`, `package*.js
 | `app/workspace/folder-card.tsx` | Client folder card: ⋯ menu (rename/delete). **Draggable + drop target** — drop a doc to file it, drop a folder to nest it (`moveFolderIntoFolder`). |
 | `app/workspace/new-folder-button.tsx` | Client "New folder" (`prompt` → `createFolder`). |
 | `app/doc/[docId]/page.tsx` | Protected (`getClaims()`); loads doc (RLS-guarded), migrates legacy `{plain}` content → `<p>` HTML, renders editor. |
-| `app/doc/[docId]/document-editor.tsx` | Client rich-text editor: title, `contenteditable` body, sticky toolbar (B/I/U, H1–H5, bullets via `execCommand`), debounced ~1 s autosave (`{version:2, html}`), soft-delete. Paste stripped to plain text. |
+| `app/doc/[docId]/document-editor.tsx` | Client rich-text editor: title, `contenteditable` body, sticky toolbar (B/I/U, H/align/list dropdowns, checklist, **Insert** dropdown → Image/Video/Audio), debounced ~1 s autosave (`{version:2, html}`). Hosts media via small modules (below); `insertNodeAtCaret` keeps media top-level (never nested); `mediaPathsIn` + per-bucket known-sets drive reconcile-on-save orphan cleanup. **Horizontal drag** repositions media (`translateX`+`data-x`): images grab directly, video/audio/link-card use a hover **drag handle** (MutationObserver-injected, stripped from saved HTML). **Backspace** at a block start deletes the preceding media figure via `execCommand("delete")` (undoable). Capture-phase media listeners drive every audio player. |
+| `app/doc/[docId]/image-toolbar.tsx` · `video-toolbar.tsx` | Contextual floating toolbars for a selected image/video (resize, align, caption, flip/filters/crop for images; align/caption/resize/delete for video). Audio has no toolbar (delete via Backspace). |
 | `app/folders/[folderId]/page.tsx` | Protected (`getClaims()`); folder view — its docs, new-doc-in-folder, inline rename, delete. |
 | `app/folders/[folderId]/folder-controls.tsx` | Client `FolderTitle` (inline rename on blur/Enter) + `DeleteFolderButton`. |
+
+**Media embeds (editor lib modules)**
+| Path | Purpose |
+|---|---|
+| `lib/compress-image.ts` | Client image compression → WebP (EXIF-baked, ≤1600px) before upload to `doc-images`. |
+| `lib/use-video-insert.ts` | Client video insert: raw upload to `doc-videos` → server `compressVideo` → swap in `<video controls>`. |
+| `lib/video-actions.ts` | `"use server"` ffmpeg transcode (H.264/CRF20/≤1080p) + poster. **Local-dev only** — breaks on Vercel serverless (see caveats); hardening on `feat/video`. |
+| `lib/audio-prepare.ts` | Client-only audio: `decodeAudioData` → ~56 waveform peaks + ≤60 s cap (≤60 s keeps original; >60 s trims to WAV). No server/ffmpeg. |
+| `lib/use-audio-insert.ts` | Client audio insert + `buildAudioFigure` (player markup w/ `data-peaks`); upload to `doc-audio`. |
+| `lib/unfurl-actions.ts` · `lib/use-link-preview.ts` | Pasted-URL link-preview cards (`"use server"` OpenGraph/oEmbed unfurl + SSRF guards; client card build + delegated play/open). |
 
 **Trash**
 | Path | Purpose |
@@ -130,7 +149,9 @@ plus modified `app/{globals.css,layout.tsx,page.tsx}`, `CLAUDE.md`, `package*.js
 | `app/trash/trash-card.tsx` | Client card for a trashed doc/folder: **Restore** + **Delete forever**. |
 | `app/trash/empty-trash-button.tsx` | Client "Empty trash" (confirm → `emptyTrash`). |
 
-**Database** — `supabase/migrations/0001_create_documents.sql`, `0002_create_folders.sql` (both applied).
+**Database** — migrations `0001_create_documents.sql`, `0002_create_folders.sql`,
+`0003_create_doc_images_bucket.sql`, `0004_create_doc_videos_bucket.sql`,
+`0005_create_doc_audio_bucket.sql` (all applied to remote).
 
 ---
 
@@ -164,23 +185,101 @@ plus modified `app/{globals.css,layout.tsx,page.tsx}`, `CLAUDE.md`, `package*.js
 - [x] **Migrations 0001 + 0002 applied** (confirmed via live doc/folder data, 2026-06-15).
 - [x] **App in active logged-in use** — documents create/edit/autosave and folders render with real data.
 - [x] **Google app published** (confirmed 2026-06-16 — new non-test email signed in).
+- [x] **App committed + deploying to `tiro.works`** (Vercel ← GitHub `main`). The "commit the working tree"
+      item is done; the app is live and auto-deploys on push.
+- [x] **Media embeds shipped:** images, video (local-dev), pasted-URL link cards, and **audio with a custom
+      waveform player** (insert/drag/paste, play/pause/seek, 60 s cap, Backspace-delete + undo). Live on prod.
 - [ ] **Confirm end-to-end manually:** profile avatar upload + save; doc reload-persists; folder add/remove/
       nest/restore. (Plumbing works in runtime; no formal pass recorded.)
-- [ ] **Commit the working tree.** Everything below the initial `create-next-app` commit is currently
-      uncommitted (see Git state note). Consider an initial real commit of the app.
+- [ ] **Audio follow-ups (deferred):** 0–200 % volume via Web Audio `GainNode` (§9.3); bulletproof undo via
+      deferred storage cleanup / soft media-trash (currently eager sweep → late-undo can 404, no orphans).
+- [ ] **Video — production transcode** (🔴): `compressVideo` spawns native ffmpeg → breaks on Vercel. Plus
+      spawn-timeout + raw-orphan-on-failure hardening. Being handled on `feat/video` (see `HANDOFF-video.md`).
 - [ ] **Optional perf:** switch proxy `getUser()` → `getClaims()` to drop the last ~375 ms/nav (tradeoff:
       revoked sessions valid until token expiry). Deferred — kept as the authoritative gate.
 - [x] **Responsive pass — page chrome** (2026-06-15): workspace/folder/trash headers + title rows now
       stack/wrap on phone (mobile-first `sm:` prefixes). Login/profile/editor were already responsive.
 - [ ] **Responsive polish (deeper):** tablet (768px) grid tuning, editor sticky-toolbar while typing on
       mobile, and confirm folder/trash hardening with a genuinely long folder name (only pattern-verified).
-- [ ] **Next doc slices:** rich block editor (§4.5) → embeds → export/publish.
+- [ ] **Next doc slices:** headers/footers · **export/publish** — **PDF export DONE** (client jsPDF, opens
+      in a new tab; on branch `feat/export-pdf`, awaiting review/merge); Markdown + Publish-to-Web `/p/[slug]`
+      still pending.
 
 ---
 
 ## Changelog
 
 ### 2026-06-17
+- **Export to PDF — opens in a new browser tab, never downloads (feature branch `feat/export-pdf`).**
+  New toolbar action that renders the current document to a PDF and opens it in a **new tab** for viewing
+  (the user downloads it from the browser's built-in PDF viewer if they want — we never force a download).
+  - **Library/approach (locked in):** **`jsPDF` (v4.2.1)** with a **hand-written DOM-walking renderer**
+    (`lib/export-pdf.ts`), NOT html2canvas / a headless browser. Reasons: (1) the renderer emits **real,
+    selectable text** with the paper/ink look (not a blurry raster), (2) it produces **small** files, (3) it
+    **sidesteps html2canvas's cross-origin canvas-taint** problems with Supabase public image URLs, and (4)
+    **no serverless headless-Chromium** to host. Images are brought in CORS-safely the same way the editor's
+    crop does it: `fetch()` the bytes → object URL → `<img>` → `<canvas>` → JPEG data URL → `addImage`
+    (so the canvas is never tainted, and webp is rasterised to a format jsPDF definitely accepts). jsPDF is
+    **dynamically imported** so it only loads when the user actually exports.
+  - **New-tab, no-download mechanics:** the PDF is emitted as an `application/pdf` **Blob object URL**
+    (`doc.output("bloburl")`). The click handler opens a blank tab **synchronously** (inside the gesture, so
+    the pop-up blocker allows it; it shows a "Generating your PDF…" splash) and then points that tab at the
+    blob URL. Result: the browser's native PDF viewer renders it in a new tab; no `Content-Disposition`
+    attachment, no save dialog.
+  - **Fidelity (verified):** document **title** (serif, with a short yolk accent rule), **headings H1–H5**
+    (serif), body text, **bold / italic / underline** (incl. bold-italic and styled mid-word runs kept
+    glued), **bulleted / numbered / checklist** lists (checklist draws a real checkbox + a yolk tick for
+    `[data-checked]`; lists hang-indent so wrapped lines align under the text), **images** (honoring the
+    figure's width-% + `data-align` + non-destructive flips/filters), figure **captions**, and the warm
+    **paper background / ink text** palette throughout. Custom line-breaker does word-wrap + alignment +
+    automatic **page breaks** (multi-page docs paginate correctly; each new page is repainted paper).
+  - **Graceful media degradation (never throws):** **video** → its poster frame + a "▶ Video" tag, or a
+    `[video]` placeholder box if no poster; **audio** (no poster possible) → a "♪ [audio]" chip; **link
+    cards** → thumbnail + title + the URL. Broken image/poster fetches fall back to a labeled placeholder
+    rather than crashing the export. The save-pipeline strip is mirrored: drag handles, selection rings, and
+    still-loading `[data-status]` placeholders are removed from a clone before rendering.
+  - **Files:** `lib/export-pdf.ts` (new — `buildDocumentPdf` returns the jsPDF doc; `exportDocumentToPdf`
+    builds + opens the tab; split so future download/publish paths can reuse the builder). `components/icons.tsx`
+    `ExportIcon` (page-with-arrow, stroke-only/currentColor, matching the icon set). `document-editor.tsx`:
+    `handleExportPdf` + an `exporting` busy state + an **Export** button after a divider at the end of the
+    sticky toolbar (reuses `toolbarBtnClass`; lights up while generating). `jspdf` added to `package.json`.
+  - **Verification:** `tsc --noEmit` + `eslint` clean; `next build` passes. Exporter exercised end-to-end via
+    Playwright against a temporary public `/pdf-test` harness (since the editor is auth-gated) using a
+    representative document (every heading/mark/list type, an image, plus video/audio/link-card) — confirmed
+    a faithful multi-page PDF, all media-degradation paths render, and **"Open in new tab" lands on a
+    `blob:` URL in a second tab (a viewer, not a download)**. The harness + a temporary `proxy.ts` public-route
+    entry were **removed/reverted** after verifying (not committed).
+  - **Untested-due-to-auth (low risk):** the Export button rendering **inside the real logged-in editor**
+    (its markup reuses existing toolbar patterns and the build passes, but it wasn't clicked in-app). Manual
+    check after login: open a real doc, click Export, confirm a new tab opens with the doc as a PDF and that
+    real Supabase-hosted images/posters appear (they're public-read, fetched CORS-safely — should be fine).
+  - **Possible follow-ups (not done):** turn the single Export button into an **Export** dropdown when
+    Markdown / Publish-to-Web land (the roadmap item below); embed the real Fraunces/Hanken fonts via
+    `addFont` for exact type matching (currently times/helvetica stand-ins); clickable link annotations on
+    link-card URLs.
+- **Media drag (video/audio/link-card) + unified Insert dropdown + new video icon.** Three editor tweaks:
+  - **X-drag for video / audio / link-card embeds** (mirrors the image pointer-drag). Images are grabbed
+    directly (whole image is the surface); these three carry interactive controls (native `<video>`, the
+    audio play button + waveform seek, the link-card click-to-open/play), so a body-grab would hijack them.
+    Chosen approach: a **small hover drag handle** (top-left; **top-right for audio** so it clears the
+    left-anchored play button). The handle is **runtime-only chrome** — a `MutationObserver` on the editor
+    adds one to every such figure as it appears (insert/paste/drop/undo, incl. the placeholder→real swap),
+    and the save clone **strips `[data-drag-handle]`** so it never persists. Dragging the handle runs the
+    same generalized `translateX` logic (clamped to the editor column, stored as inline transform +
+    `data-x`); on drop it re-selects the figure so the floating image/video toolbar re-measures at the new
+    spot (audio/link-card have no toolbar). `onEditorClick` now early-returns on a handle click so a no-move
+    click can't trigger link-open / audio / select. CSS handle styles + `position: relative` on the three
+    figure types in `globals.css` (handle shows on figure hover / while dragging; "↔" glyph signals the
+    horizontal-only move).
+  - **Insert dropdown.** The three separate Image / Video / Audio toolbar buttons collapsed into ONE
+    **Insert** `ToolbarMenu` (reuses the existing `ToolbarMenu`/`MenuItem` pattern; new `PlusIcon` trigger).
+    Each item fires the matching hidden file input (`fileInputRef`/`videoInputRef`/`audioInputRef`, kept as
+    is); the trigger highlights while any insert is in flight and the busy item shows "Adding…".
+  - **VideoFrameIcon redesigned** — the old framed play-triangle read like the YouTube logo. Now a
+    **clapperboard** (hinged striped bar + slate body), stroke-only / currentColor / 24×24, consistent with
+    `ImageFrameIcon`/`AudioFrameIcon`. Verified visually via a standalone render (distinct, clean).
+  - `tsc --noEmit` + `eslint` clean; dev server compiles and serves. **Interactive drag/insert not yet
+    runtime-tested in-app** (editor is auth-gated — needs a login + real media). Icon confirmed by render.
 - **Backspace-delete made undoable.** Initial version used `prev.remove()` (raw Node API) → bypassed the
   contenteditable editing surface, so Cmd/Ctrl+Z couldn't restore it (whereas inserts, which go through
   `range.insertNode`/`execCommand`, ARE tracked by the native undo stack). Fix: the Backspace handler now
