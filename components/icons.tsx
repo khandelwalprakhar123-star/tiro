@@ -65,8 +65,9 @@ export function ImageFrameIcon({ className }: { className?: string }) {
   );
 }
 
-// Video glyph — a framed play triangle. Pairs with ImageFrameIcon on the
-// toolbar (same colorless, stroke-only language).
+// Video glyph — a clapperboard (hinged striped bar atop a slate). Deliberately
+// NOT a framed play triangle (that read like the YouTube logo). Same colorless,
+// stroke-only language as ImageFrameIcon / AudioFrameIcon.
 export function VideoFrameIcon({ className }: { className?: string }) {
   return (
     <svg
@@ -77,20 +78,55 @@ export function VideoFrameIcon({ className }: { className?: string }) {
       aria-hidden
       className={className}
     >
+      {/* clapper (hinged top bar) */}
       <rect
         x="3"
-        y="5"
+        y="4"
         width="18"
-        height="14"
-        rx="2.5"
-        stroke="currentColor"
-        strokeWidth="1.6"
-      />
-      <path
-        d="M10 9.2 L15 12 L10 14.8 Z"
+        height="4"
+        rx="1"
         stroke="currentColor"
         strokeWidth="1.6"
         strokeLinejoin="round"
+      />
+      {/* diagonal teeth across the clapper */}
+      <path
+        d="M7 4 L5.5 8 M11 4 L9.5 8 M15 4 L13.5 8 M19 4 L17.5 8"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+      />
+      {/* slate body */}
+      <rect
+        x="3"
+        y="8"
+        width="18"
+        height="12"
+        rx="2"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+// Insert glyph — a plain plus. Triggers the unified Image / Video / Audio
+// insert dropdown.
+export function PlusIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden
+      className={className}
+    >
+      <path
+        d="M12 5V19 M5 12H19"
+        stroke="currentColor"
+        strokeWidth="1.8"
         strokeLinecap="round"
       />
     </svg>
@@ -246,6 +282,45 @@ export function TrashIcon({ className }: { className?: string }) {
         strokeLinejoin="round"
       />
       <path d="M10 11v6M14 11v6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+// Export glyph — a document with an arrow leaving its top edge: "send this page
+// out" (to a PDF, opened in a new tab). Same stroke-only / currentColor language.
+export function ExportIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden
+      className={className}
+    >
+      {/* page with a folded corner */}
+      <path
+        d="M7 13.5V5.5A1.5 1.5 0 0 1 8.5 4h6l4 4v8.5a1.5 1.5 0 0 1-1.5 1.5h-4"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+      <path
+        d="M14 4v4h4"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+      {/* arrow rising out of the page */}
+      <path
+        d="M4 16.5h6M7.5 13.5 4 16.5l3.5 3"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }

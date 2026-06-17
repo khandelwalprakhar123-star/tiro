@@ -10,11 +10,14 @@ import { VideoToolbar } from "./video-toolbar";
 import { useVideoInsert, VIDEO_BUCKET, VIDEO_ACCEPT } from "@/lib/use-video-insert";
 import { useAudioInsert, AUDIO_BUCKET, AUDIO_ACCEPT } from "@/lib/use-audio-insert";
 import { useLinkPreview } from "@/lib/use-link-preview";
+import { exportDocumentToPdf } from "@/lib/export-pdf";
 import {
   AudioFrameIcon,
   ChecklistIcon,
+  ExportIcon,
   ImageFrameIcon,
   ListIcon,
+  PlusIcon,
   TextAlignIcon,
   VideoFrameIcon,
 } from "@/components/icons";
@@ -182,6 +185,7 @@ export function DocumentEditor({
   const [save, setSave] = useState<SaveState>("idle");
   const [deleting, setDeleting] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [active, setActive] = useState<ActiveMarks>(EMPTY_ACTIVE);
   const [selectedFigure, setSelectedFigure] = useState<HTMLElement | null>(null);
   const [selectedVideo, setSelectedVideo] = useState<HTMLElement | null>(null);
@@ -205,6 +209,11 @@ export function DocumentEditor({
         clone
           .querySelectorAll(".is-selected")
           .forEach((n) => n.classList.remove("is-selected"));
+        // Drag handles are runtime-only UI (re-added on load by the observer
+        // below) — never persist them into the saved HTML.
+        clone
+          .querySelectorAll("[data-drag-handle]")
+          .forEach((n) => n.remove());
         clone
           .querySelectorAll(
             'figure[data-video][data-status], figure[data-audio][data-status], figure[data-link-card][data-status="loading"]',
@@ -312,6 +321,43 @@ export function DocumentEditor({
     }
     // run once on mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── Media drag handles ────────────────────────────────────────────────
+  // Video/audio/link-card embeds carry interactive controls, so (unlike images)
+  // they aren't dragged by grabbing their body — they get a small hover handle
+  // that initiates the horizontal drag (see onEditorPointerDown). The handle is
+  // runtime-only chrome: this observer adds one to every such figure as it
+  // appears (insert / paste / drop / undo), and the save clone strips them so
+  // they never land in the stored HTML.
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    const SELECTOR =
+      "figure[data-video], figure[data-audio], figure[data-link-card]";
+    const ensure = (fig: Element) => {
+      if (fig.querySelector(":scope > [data-drag-handle]")) return;
+      const handle = document.createElement("span");
+      handle.setAttribute("data-drag-handle", "");
+      handle.setAttribute("aria-hidden", "true");
+      handle.title = "Drag to move";
+      fig.appendChild(handle);
+    };
+    const sweep = (root: ParentNode) =>
+      root.querySelectorAll(SELECTOR).forEach(ensure);
+    sweep(editor);
+    const obs = new MutationObserver((records) => {
+      for (const rec of records) {
+        rec.addedNodes.forEach((n) => {
+          if (n.nodeType !== 1) return;
+          const el = n as HTMLElement;
+          if (el.matches(SELECTOR)) ensure(el);
+          sweep(el);
+        });
+      }
+    });
+    obs.observe(editor, { childList: true, subtree: true });
+    return () => obs.disconnect();
   }, []);
 
   // Track selection changes only while interacting with our editor.
@@ -460,6 +506,10 @@ export function DocumentEditor({
   const onEditorClick = useCallback(
     (e: React.MouseEvent) => {
       const target = e.target as HTMLElement;
+      // A click that lands on a drag handle is purely a (no-move) drag attempt —
+      // never a play/seek/open/select. Swallow it so it doesn't fall through to
+      // the link-card open or audio handlers below.
+      if (target.closest("[data-drag-handle]")) return;
       // Toggle a checklist box.
       const box = target.closest("[data-check]");
       if (box) {
@@ -656,19 +706,42 @@ export function DocumentEditor({
       : null;
   }, []);
 
-  // Drag an image left/right to set its horizontal position: a translateX on the
-  // figure, clamped so it stays inside the editor column (text still flows above
-  // and below — this only moves it on the x-axis). Pointer-based so it's fluid
-  // and actually places, unlike native HTML5 drag inside contenteditable. A
-  // plain click with no movement falls through to onEditorClick → select.
+  // Drag a media figure left/right to set its horizontal position: a translateX
+  // on the figure, clamped so it stays inside the editor column (text still flows
+  // above and below — this only moves it on the x-axis). Pointer-based so it's
+  // fluid and actually places, unlike native HTML5 drag inside contenteditable.
+  //
+  // Images are grabbed directly (the whole image is the drag surface). Video,
+  // audio, and link-card embeds carry interactive controls, so grabbing their
+  // body would hijack playback/seek/open — they're dragged by their small hover
+  // handle instead (added by the observer above). A plain click with no movement
+  // falls through to onEditorClick (image → select; others → their own handler).
   const onEditorPointerDown = useCallback(
     (e: React.PointerEvent) => {
       if (e.button !== 0) return;
       const target = e.target as HTMLElement;
-      if (target.tagName !== "IMG") return;
-      const figure = target.closest("figure[data-img]") as HTMLElement | null;
       const editor = editorRef.current;
-      if (!figure || !editor) return;
+      if (!editor) return;
+
+      let figure: HTMLElement | null = null;
+      const handle = target.closest<HTMLElement>("[data-drag-handle]");
+      if (handle) {
+        figure = handle.closest<HTMLElement>(
+          "figure[data-video], figure[data-audio], figure[data-link-card]",
+        );
+        // Don't let the handle drop a caret or start a text selection.
+        if (figure) e.preventDefault();
+      } else if (target.tagName === "IMG") {
+        figure = target.closest<HTMLElement>("figure[data-img]");
+      }
+      if (!figure) return;
+
+      // Re-select the figure after a move so its floating toolbar re-measures at
+      // the new spot. Audio / link-card have no toolbar — nothing to re-measure.
+      const reselect = (fig: HTMLElement) => {
+        if (fig.matches("figure[data-img]")) setSelectedFigure(fig);
+        else if (fig.matches("figure[data-video]")) setSelectedVideo(fig);
+      };
 
       const edRect = editor.getBoundingClientRect();
       const figRect = figure.getBoundingClientRect();
@@ -683,22 +756,24 @@ export function DocumentEditor({
         if (!moved && Math.abs(dx) < 4) return; // ignore micro-jitter so clicks still select
         if (!moved) {
           moved = true;
-          figure.classList.add("is-dragging");
-          setSelectedFigure(null); // hide the (now-stale) toolbar while dragging
+          figure!.classList.add("is-dragging");
+          // Hide any (now-stale) floating toolbar while dragging.
+          setSelectedFigure(null);
+          setSelectedVideo(null);
         }
         let tx = startTx + dx;
         const left = baseLeft + tx;
         if (left < edRect.left) tx += edRect.left - left;
         else if (left > edRect.right - width) tx -= left - (edRect.right - width);
-        figure.style.transform = `translateX(${tx.toFixed(1)}px)`;
-        figure.dataset.x = tx.toFixed(1);
+        figure!.style.transform = `translateX(${tx.toFixed(1)}px)`;
+        figure!.dataset.x = tx.toFixed(1);
       };
       const onUp = () => {
         window.removeEventListener("pointermove", onMove);
         window.removeEventListener("pointerup", onUp);
         if (moved) {
-          figure.classList.remove("is-dragging");
-          setSelectedFigure(figure); // re-select so the toolbar re-measures at the new spot
+          figure!.classList.remove("is-dragging");
+          reselect(figure!);
           scheduleSave();
         }
       };
@@ -760,6 +835,33 @@ export function DocumentEditor({
     editorRef.current?.focus();
     scheduleSave();
   }, [insertNodeAtCaret, scheduleSave]);
+
+  // ── Export to PDF ─────────────────────────────────────────────────────
+  // Build a PDF from the document and open it in a NEW TAB for viewing (never a
+  // download — the user saves it from the browser's PDF viewer if they want).
+  // The tab is opened synchronously inside the click gesture so the popup
+  // blocker allows it; we then navigate it to the generated PDF's object URL.
+  const handleExportPdf = useCallback(() => {
+    const editor = editorRef.current;
+    if (!editor || exporting) return;
+    const tab = window.open("", "_blank");
+    if (tab) {
+      tab.document.write(
+        "<!doctype html><meta charset=utf-8><title>Preparing PDF…</title>" +
+          '<body style="margin:0;display:grid;place-items:center;height:100vh;' +
+          "background:#faf4e8;color:#6b6051;font:15px/1.5 ui-sans-serif,system-ui," +
+          'sans-serif">Generating your PDF…</body>',
+      );
+    }
+    setExporting(true);
+    exportDocumentToPdf({ title: titleRef.current, editor, tab })
+      .catch((err) => {
+        console.error("PDF export failed", err);
+        tab?.close();
+        setSave("error");
+      })
+      .finally(() => setExporting(false));
+  }, [exporting]);
 
   async function handleDelete() {
     if (!confirm("Move this document to trash?")) return;
@@ -1094,23 +1196,48 @@ export function DocumentEditor({
 
           <span className="mx-1 h-6 w-px bg-line" />
 
-          <button
-            type="button"
-            aria-label="Insert image"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-            className={`${btn(false)} gap-1.5 disabled:opacity-50`}
+          {/* Insert dropdown — one trigger for Image / Video / Audio. Each item
+              opens the matching hidden file input; the trigger lights up while
+              any insert is in flight, and a busy item shows "Adding…". */}
+          <ToolbarMenu
+            title="Insert media"
+            active={uploading || uploadingVideo || uploadingAudio}
+            trigger={<PlusIcon className="h-6 w-6" />}
           >
-            {uploading ? (
-              "Adding…"
-            ) : (
+            {(close) => (
               <>
-                <ImageFrameIcon className="h-6 w-6 opacity-80" /> Image
+                <MenuItem
+                  onClick={() => {
+                    fileInputRef.current?.click();
+                    close();
+                  }}
+                >
+                  <ImageFrameIcon className="h-4 w-4" />
+                  {uploading ? "Adding…" : "Image"}
+                </MenuItem>
+                <MenuItem
+                  onClick={() => {
+                    videoInputRef.current?.click();
+                    close();
+                  }}
+                >
+                  <VideoFrameIcon className="h-4 w-4" />
+                  {uploadingVideo ? "Adding…" : "Video"}
+                </MenuItem>
+                <MenuItem
+                  onClick={() => {
+                    audioInputRef.current?.click();
+                    close();
+                  }}
+                >
+                  <AudioFrameIcon className="h-4 w-4" />
+                  {uploadingAudio ? "Adding…" : "Audio"}
+                </MenuItem>
               </>
             )}
-          </button>
-          {/* Hidden picker; reset value so the same file can be re-chosen. */}
+          </ToolbarMenu>
+
+          {/* Hidden pickers; reset value so the same file can be re-chosen. */}
           <input
             ref={fileInputRef}
             type="file"
@@ -1122,23 +1249,6 @@ export function DocumentEditor({
               e.target.value = "";
             }}
           />
-
-          <button
-            type="button"
-            aria-label="Insert video"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => videoInputRef.current?.click()}
-            disabled={uploadingVideo}
-            className={`${btn(false)} gap-1.5 disabled:opacity-50`}
-          >
-            {uploadingVideo ? (
-              "Adding…"
-            ) : (
-              <>
-                <VideoFrameIcon className="h-6 w-6 opacity-80" /> Video
-              </>
-            )}
-          </button>
           <input
             ref={videoInputRef}
             type="file"
@@ -1150,23 +1260,6 @@ export function DocumentEditor({
               e.target.value = "";
             }}
           />
-
-          <button
-            type="button"
-            aria-label="Insert audio"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => audioInputRef.current?.click()}
-            disabled={uploadingAudio}
-            className={`${btn(false)} gap-1.5 disabled:opacity-50`}
-          >
-            {uploadingAudio ? (
-              "Adding…"
-            ) : (
-              <>
-                <AudioFrameIcon className="h-6 w-6 opacity-80" /> Audio
-              </>
-            )}
-          </button>
           <input
             ref={audioInputRef}
             type="file"
@@ -1178,6 +1271,23 @@ export function DocumentEditor({
               e.target.value = "";
             }}
           />
+
+          <span className="mx-1 h-6 w-px bg-line" />
+
+          {/* Export to PDF — opens the rendered document in a new browser tab
+              (the user downloads it from there if they want; we never force a
+              download). Lights up while the PDF is being generated. */}
+          <button
+            type="button"
+            title="Export to PDF — opens in a new tab"
+            aria-label="Export to PDF"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={handleExportPdf}
+            disabled={exporting}
+            className={btn(exporting)}
+          >
+            <ExportIcon className="h-6 w-6" />
+          </button>
         </div>
 
         {/* Body — contenteditable rich text */}
