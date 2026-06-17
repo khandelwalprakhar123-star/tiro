@@ -703,17 +703,14 @@ function renderTitle(ctx: Ctx, title: string) {
   ctx.y += 18;
 }
 
-// ── Public entry point ───────────────────────────────────────────────────────
-// Generates the PDF and points `tab` (a window opened synchronously on click,
-// to dodge popup blockers) at the resulting object URL. If `tab` is null the
-// caller should surface a "allow pop-ups" message. Never throws on media.
-export async function exportDocumentToPdf(opts: {
-  title: string;
-  editor: HTMLElement;
-  tab: Window | null;
-}): Promise<void> {
-  const { title, editor, tab } = opts;
-
+// ── Build ────────────────────────────────────────────────────────────────────
+// Render the editor's document into a jsPDF instance. Exposed on its own so it
+// can be reused (download / publish later) and tested in isolation. Never throws
+// on media — broken images/posters fall back to placeholders.
+export async function buildDocumentPdf(
+  title: string,
+  editor: HTMLElement,
+): Promise<JsPdf> {
   // Clone the live editor and strip runtime-only chrome (drag handles, selection
   // rings, and any still-loading media placeholders) — exactly what the save
   // pipeline persists, so the PDF matches the saved document.
@@ -733,6 +730,20 @@ export async function exportDocumentToPdf(opts: {
 
   renderTitle(ctx, title);
   await renderChildren(ctx, clone);
+  return doc;
+}
+
+// ── Public entry point ───────────────────────────────────────────────────────
+// Generates the PDF and points `tab` (a window opened synchronously on click,
+// to dodge popup blockers) at the resulting object URL. If `tab` is null the
+// caller should surface an "allow pop-ups" message. Never throws on media.
+export async function exportDocumentToPdf(opts: {
+  title: string;
+  editor: HTMLElement;
+  tab: Window | null;
+}): Promise<void> {
+  const { title, editor, tab } = opts;
+  const doc = await buildDocumentPdf(title, editor);
 
   // A real application/pdf object URL → the new tab's address bar → the browser's
   // built-in PDF viewer. No download is ever triggered.
