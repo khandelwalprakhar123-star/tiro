@@ -273,6 +273,119 @@ body {
   }
 }
 
+/* Inserted audio — a custom player: a yolk play/pause button, a real waveform
+   (bars built from data-peaks), and a time readout. The played portion fills
+   yolk via two layered bar rows: a muted base and a yolk copy clipped to the
+   --played fraction (0–1) that the editor updates on timeupdate. */
+.doc-content figure[data-audio] {
+  width: 80%;
+  max-width: 100%;
+  margin: 1.5rem auto;
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 0.8rem;
+  background: var(--paper);
+  user-select: none;
+}
+.doc-content figure[data-audio] [data-audio-play] {
+  flex: none;
+  width: 2.4rem;
+  height: 2.4rem;
+  border: none;
+  border-radius: 50%;
+  background: var(--yolk);
+  cursor: pointer;
+  position: relative;
+  transition:
+    background 0.15s ease,
+    transform 0.1s ease;
+}
+.doc-content figure[data-audio] [data-audio-play]:hover {
+  background: var(--yolk-deep);
+}
+.doc-content figure[data-audio] [data-audio-play]:active {
+  transform: scale(0.94);
+}
+/* Play triangle (default / paused). */
+.doc-content figure[data-audio] [data-audio-play]::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 54%;
+  transform: translate(-50%, -50%);
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 0.42rem 0 0.42rem 0.7rem;
+  border-color: transparent transparent transparent var(--ink);
+}
+/* Two pause bars while playing. */
+.doc-content figure[data-audio][data-playing] [data-audio-play]::before {
+  left: 50%;
+  width: 0.68rem;
+  height: 0.8rem;
+  border: none;
+  background-image:
+    linear-gradient(var(--ink), var(--ink)),
+    linear-gradient(var(--ink), var(--ink));
+  background-size: 0.22rem 100%;
+  background-position:
+    left center,
+    right center;
+  background-repeat: no-repeat;
+}
+.doc-content figure[data-audio] [data-waveform] {
+  position: relative;
+  flex: 1;
+  height: 2.4rem;
+  cursor: pointer;
+}
+.doc-content figure[data-audio] [data-bars],
+.doc-content figure[data-audio] [data-bars-played] {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+/* The yolk copy is clipped from the right to reveal only the played fraction;
+   it stays full-width so the bars never squish as it fills. */
+.doc-content figure[data-audio] [data-bars-played] {
+  clip-path: inset(0 calc((1 - var(--played, 0)) * 100%) 0 0);
+}
+.doc-content figure[data-audio] [data-bars] span,
+.doc-content figure[data-audio] [data-bars-played] span {
+  flex: 1;
+  min-height: 2px;
+  border-radius: 1px;
+}
+.doc-content figure[data-audio] [data-bars] span {
+  background: color-mix(in srgb, var(--ink) 22%, transparent);
+}
+.doc-content figure[data-audio] [data-bars-played] span {
+  background: var(--yolk-deep);
+}
+.doc-content figure[data-audio] [data-audio-time] {
+  flex: none;
+  min-width: 5.5ch;
+  text-align: right;
+  font-size: 0.76rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
+}
+/* "Preparing…" placeholder shown while we decode + upload. */
+.doc-content figure[data-audio][data-status] [data-audio-loading] {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+}
+
 /* Link-preview cards — a pasted URL becomes a rich, clickable card (Slack/Discord
    style unfurl). Block element like figures; the whole card is clickable. */
 .doc-content figure[data-link-card] {

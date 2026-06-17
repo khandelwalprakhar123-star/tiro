@@ -43,8 +43,9 @@
 Mumbai project. Email: Resend SMTP + OTP template + Confirm-email OFF + URL config. Google: OAuth client
 created in Google Cloud (consent screen External; redirect URI = Supabase callback
 `https://rgryvohgicykwuxnwnhe.supabase.co/auth/v1/callback`), Client ID/Secret added to Supabase
-Sign In / Providers → Google. App still in Google "Testing" mode (test users only) — publish later for
-public use.
+Sign In / Providers → Google. **Google app is published** (confirmed 2026-06-16: a brand-new,
+non-allow-listed email signed in successfully → not gated to test users). Consent-screen display
+name may still read "DeeScribe" (cosmetic only; does not affect logins).
 
 **Session verification (perf, 2026-06-15):** the proxy (`proxy.ts`) runs the authoritative
 `getUser()` (network revalidate + cookie refresh) on every request. Protected **pages** use
@@ -162,7 +163,7 @@ plus modified `app/{globals.css,layout.tsx,page.tsx}`, `CLAUDE.md`, `package*.js
 - [x] **Google OAuth working end-to-end** (Google Cloud client + Supabase provider configured).
 - [x] **Migrations 0001 + 0002 applied** (confirmed via live doc/folder data, 2026-06-15).
 - [x] **App in active logged-in use** — documents create/edit/autosave and folders render with real data.
-- [ ] **Publish Google app** (out of "Testing" mode) when ready for non-test-user logins. Low priority.
+- [x] **Google app published** (confirmed 2026-06-16 — new non-test email signed in).
 - [ ] **Confirm end-to-end manually:** profile avatar upload + save; doc reload-persists; folder add/remove/
       nest/restore. (Plumbing works in runtime; no formal pass recorded.)
 - [ ] **Commit the working tree.** Everything below the initial `create-next-app` commit is currently
@@ -179,7 +180,88 @@ plus modified `app/{globals.css,layout.tsx,page.tsx}`, `CLAUDE.md`, `package*.js
 
 ## Changelog
 
+### 2026-06-17
+- **Bugfix: media figures nesting on insert (corrupted audio render).** First runtime test showed audio
+  players as bare unstyled text. Root cause (found via inspecting saved DOM): a second media insert could
+  land with the caret *inside* a previous non-editable figure, jamming the new `<figure>` into the prior
+  figure's `<span data-audio-time>` → invalid HTML (`figure` inside `span`) → browser reparents on reload
+  → flex layout collapses → looks unstyled. NOT a CSS bug. Fix: `insertNodeAtCaret` now walks up from the
+  caret and, if it sits within a `contenteditable=false` block, repositions to just *after* the outermost
+  such block — so image/video/audio always insert at the top level, never nested. `tsc`+`eslint` clean.
+  **Docs already saved with the bad HTML stay corrupted** — test in a fresh doc; clear `.next` to rule out
+  CSS caching. (Same fix protects image + video inserts.)
+- **Audio embeds + custom waveform player — BUILT** (steps 2–4 of the §9 plan; gate clean,
+  not yet runtime-tested). Migration 0005 **applied** to remote (`supabase db query --linked`;
+  `doc-audio` bucket + 4 RLS policies created). New code:
+  - **`lib/audio-prepare.ts`** — browser-only: `decodeAudioData` (OfflineAudioContext @22.05 kHz to
+    bound memory) → `computePeaks` (avg channels → 56 peak bars, normalised 0–100) + ≤60 s cap. ≤60 s
+    uploads the **original file untouched**; >60 s trims to the first 60 s and re-encodes that slice to
+    **WAV** (dependency-free `encodeWav`, 16-bit PCM). No ffmpeg, no server compute.
+  - **`lib/use-audio-insert.ts`** — `useAudioInsert` hook (mirrors the video hook minus the server
+    action) + `buildAudioFigure`: optimistic "Preparing…" placeholder → prepare → upload blob to
+    `doc-audio` at `‹uid›/‹docId›/‹id›.‹ext›` → swap in the player. Player markup is fully serializable
+    (`data-peaks`, two layered bar rows, `<audio preload=metadata>`); 50 MB guard; mid-flight-delete race
+    handled.
+  - **`document-editor.tsx`** seams: `mediaPathsIn` now returns `audios` (from `audio[data-path]`);
+    `knownAudioPaths` ref seeded on mount + diffed on save (orphan sweep on `doc-audio`); save clone
+    strips `figure[data-audio][data-status]` placeholders and resets transient `--played`/`data-playing`;
+    Audio toolbar button + hidden `audio/*` input; drop + paste route audio files; `onEditorClick` does
+    play/pause + click-to-seek on the waveform. **Key trick:** ONE set of **capture-phase** media
+    listeners on the editor drives every player (current + reloaded) — media events don't bubble but the
+    capture phase still reaches the parent, so no per-element hydration. `timeupdate` sets the `--played`
+    fill fraction; CSS clips a yolk bar-row copy to it (WhatsApp-style progress).
+  - **`components/icons.tsx`** `AudioFrameIcon` (waveform bars). **`actions.ts`** `purgeDocMedia` now
+    sweeps `doc-audio` too. **`globals.css`** `figure[data-audio]` player styles (yolk play/pause button,
+    layered waveform with `--played` clip-path fill, time readout, Preparing placeholder).
+  - **Deferred (per user):** 0–200 % volume / Web Audio GainNode. **No contextual audio toolbar** in v1
+    (delete via Backspace on the atomic block). `tsc --noEmit` + `eslint` clean; **runtime test pending**
+    (auth-gated — needs a login + a real audio upload). Retired `HANDOFF-audio.md`.
+- **Audio embeds + custom player — slice started (PRD recorded, migration written).** New feature:
+  embed audio in a doc with a custom yolk-accented player and a **real WhatsApp-style waveform**.
+  - **PRD §9 added to `prd.md`** (status table row + full section), and §"Open questions" renumbered
+    §9→§10. Records two deliberate decisions: (1) **deviation from `prd-vision.md` §9.1** — real
+    waveform instead of the spec's "decorative only" (better UX, near-zero extra cost; vision left
+    unedited as the frozen reference). (2) **Least-resource approach** — compute waveform peaks ONCE
+    in the uploader's browser at insert (`decodeAudioData` → ~50 normalised bars), store on the figure
+    as `data-peaks` in the existing `{version:2, html}` model (**no schema change**); every viewer
+    renders instantly, zero server compute, audio streams only on play. **0–200% volume (GainNode)
+    deferred** per user — first cut is play/pause + seek + waveform.
+  - **Migration `supabase/migrations/0005_create_doc_audio_bucket.sql` written** (NOT yet applied):
+    public-read `doc-audio` bucket, 50 MB cap, owner-scoped write RLS, path `‹uid›/‹docId›/‹id›.‹ext›`
+    — mirrors `doc-videos` (0004). No transcode / no `-raw` temp (audio stored as-is). Apply via
+    `supabase db query --linked -f …0005….sql` (the established path while migration history is split).
+- **Reviewed video import for crash caveats (no code change yet).** Local dev: working as designed
+  (auth re-check, path-ownership guard, temp-dir `finally` cleanup, mid-encode delete race handled).
+  The "max ~11s" the user observed is **not** a code limit — nothing caps duration; just the test
+  clips. Real caveats surfaced: **(1) 🔴 production/Vercel will break** — `compressVideo` spawns the
+  native `ffmpeg-static` binary via `execFile`; serverless has no `maxDuration` set (default ~10s on
+  Hobby) so `preset slow` encodes get killed, plus `/tmp` ~512 MB + memory limits + binary may not
+  ship. Transcode must move off Vercel before deploying video. **(2) 🟠 no `timeout` on the ffmpeg
+  spawn** → a malformed/huge file can hang the action forever (spinner never resolves). **(3) 🟠
+  `preset slow` scales with length×resolution** — long/4K or many parallel drops saturate CPU / feel
+  like a hang. **(4) 🟡 failed encode leaks a `…-raw` orphan** in storage until doc purge. Offered to
+  add the spawn timeout as cheap hardening.
+
 ### 2026-06-16
+- **Hardened the magic-link / email-OTP template for real inboxes.** The custom branded HTML (Tiro card,
+  yolk accent, code box) lived only in the Supabase dashboard and rendered poorly because it pulled fonts
+  via `<link href="fonts.googleapis.com">` — email clients strip `<head>`/`<link>`, so Fraunces/Hanken
+  never loaded. Rewrote it with web-safe stacks only (Georgia serif for display + code, Helvetica/Arial for
+  body — accessible everywhere, no external requests) and added an Outlook MSO ghost-table wrapper so the
+  480px card keeps its width/rounded corners in the Word engine. Now version-controlled at
+  `supabase/templates/magic_link.html` and wired via `[auth.email.template.magic_link]` in `config.toml`
+  (still needs pasting into the hosted dashboard, or `supabase stop && start` for local). Variable is
+  `{{ .Token }}` (correct for email OTP; `.Code` is SMS-only).
+- **Fixed Google OAuth "redirects to localhost" after rebrand.** Root cause: Supabase **URL Configuration**
+  still had the old dev `Site URL` and the new domain was not on the redirect allow-list, so Supabase
+  ignored the app's `redirectTo` and fell back to `localhost`. Fix (dashboard): `Site URL` →
+  `https://tiro.works`; added `https://tiro.works/auth/callback`, `https://www.tiro.works/auth/callback`,
+  `http://localhost:3000/auth/callback` to **Redirect URLs**. Google provider toggle was already Enabled.
+- **Restored paused Supabase project.** A spinning load at `…supabase.co/auth/v1/authorize` (mid-OAuth) was
+  the free-tier project being auto-paused; restoring it cleared the hang.
+- **Confirmed Google app is published** (not in Testing mode): a brand-new non-allow-listed email signed in
+  successfully. Removes the prior "publish Google app" pending item. Consent-screen name may still show
+  "DeeScribe" (cosmetic).
 - **Rebrand: DeeScribe → Tiro** (domain `tiro.works`, bought on GoDaddy). Named after Marcus Tullius Tiro.
   - **GitHub repo renamed** `deescribe` → `tiro` via `gh repo rename` — remote `origin` is now
     `https://github.com/khandelwalprakhar123-star/tiro.git` (local remote auto-rewritten; old URL redirects).
@@ -195,6 +277,19 @@ plus modified `app/{globals.css,layout.tsx,page.tsx}`, `CLAUDE.md`, `package*.js
     attach `tiro.works` in Vercel Domains + add A(`@`)/CNAME(`www`) records at GoDaddy.
   - **Not changed:** local dir name (`texteditor`), Supabase ref/URL, env vars, storage bucket names,
     migrations.
+  - **Domain wired:** `tiro.works` added in Vercel (apex primary; `www` redirects). DNS kept at GoDaddy —
+    apex **A `@` → `216.198.79.1`** (Vercel new-scheme IP), **CNAME `www` → `d2bc8aa19557a0c8.vercel-dns-017.com`**
+    (edited GoDaddy's default Parked A + `www`→`tiro.works` CNAME; NS/SOA/_domainconnect left intact).
+    Verified live via `dig`. SSL auto-issued by Vercel.
+  - **Deploy gotcha — Vercel "BLOCKED" deployments.** First two pushes deployed but Vercel marked them
+    `BLOCKED`. Root cause: **no git identity was set on the machine**, so commits were authored as
+    `humptydumpty@Humptys-MacBook-Air.local` (hostname-derived), which isn't a GitHub-recognized email →
+    Vercel's commit-author anti-abuse gate blocks the build. Also had to reconnect Vercel↔GitHub once after
+    the repo rename. **Fix:** set `git config user.name "Prakhar Khandelwal"` + `user.email` to the GitHub
+    no-reply address `260607936+khandelwalprakhar123-star@users.noreply.github.com` (guaranteed tied to the
+    account, keeps real email private), then a fresh commit deployed cleanly (Vercel resolved
+    `githubCommitAuthorLogin`). NOTE: identity is set **repo-local only** — set it `--global` to avoid the
+    same block in other repos. The two earlier bad-author commits remain in history (harmless; tip is valid).
 - **Video upload + server-side compression, and pasted-URL link previews (feature branch `feat/video`).**
   Built in a git worktree (`.claude/worktrees/video`) off the `773115b` baseline so it can later merge cleanly
   alongside the parallel image work above. Two capabilities, deliberately split into separate files so they

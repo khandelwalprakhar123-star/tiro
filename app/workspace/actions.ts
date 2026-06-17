@@ -17,6 +17,7 @@ async function requireUser() {
 
 const DOC_IMAGES = "doc-images";
 const DOC_VIDEOS = "doc-videos";
+const DOC_AUDIO = "doc-audio";
 
 // Remove every stored object under a bucket's  ‹uid›/‹docId›/…  prefix in one
 // list + one remove. Best-effort: storage errors are swallowed so a stuck file
@@ -35,9 +36,9 @@ async function purgeBucketPrefix(
   }
 }
 
-// Permanently remove every image AND video a document stored. Both buckets use
-// the same flat  ‹uid›/‹docId›/…  layout. Used only on HARD delete (purge /
-// empty trash) — soft delete keeps media for restore.
+// Permanently remove every image, video AND audio file a document stored. All
+// buckets use the same flat  ‹uid›/‹docId›/…  layout. Used only on HARD delete
+// (purge / empty trash) — soft delete keeps media for restore.
 async function purgeDocMedia(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
@@ -47,6 +48,7 @@ async function purgeDocMedia(
   await Promise.all([
     purgeBucketPrefix(supabase, DOC_IMAGES, prefix),
     purgeBucketPrefix(supabase, DOC_VIDEOS, prefix),
+    purgeBucketPrefix(supabase, DOC_AUDIO, prefix),
   ]);
 }
 

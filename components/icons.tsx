@@ -97,6 +97,39 @@ export function VideoFrameIcon({ className }: { className?: string }) {
   );
 }
 
+// Audio glyph — a small waveform (bars of varying height): signals the insert-
+// audio button, echoing the player's own waveform.
+export function AudioFrameIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden
+      className={className}
+    >
+      {[
+        [4, 10, 4],
+        [8, 6, 12],
+        [12, 3, 18],
+        [16, 7, 10],
+        [20, 11, 2],
+      ].map(([x, y, h]) => (
+        <rect
+          key={x}
+          x={x - 1}
+          y={y}
+          width="1.8"
+          height={h}
+          rx="0.9"
+          fill="currentColor"
+        />
+      ))}
+    </svg>
+  );
+}
+
 // List glyph — three rows marked with a roman "I", an "a", and a dot: signals
 // the list-type dropdown (numbered / lettered / bulleted).
 export function ListIcon({ className }: { className?: string }) {

@@ -8,8 +8,10 @@ import { compressImage } from "@/lib/compress-image";
 import { ImageToolbar } from "./image-toolbar";
 import { VideoToolbar } from "./video-toolbar";
 import { useVideoInsert, VIDEO_BUCKET, VIDEO_ACCEPT } from "@/lib/use-video-insert";
+import { useAudioInsert, AUDIO_BUCKET, AUDIO_ACCEPT } from "@/lib/use-audio-insert";
 import { useLinkPreview } from "@/lib/use-link-preview";
 import {
+  AudioFrameIcon,
   ChecklistIcon,
   ImageFrameIcon,
   ListIcon,
@@ -34,9 +36,11 @@ type Props = {
 function mediaPathsIn(root: HTMLElement | null): {
   images: Set<string>;
   videos: Set<string>;
+  audios: Set<string>;
 } {
   const images = new Set<string>();
   const videos = new Set<string>();
+  const audios = new Set<string>();
   root?.querySelectorAll<HTMLImageElement>("img[data-path]").forEach((img) => {
     const p = img.getAttribute("data-path");
     if (p) images.add(p);
@@ -47,7 +51,11 @@ function mediaPathsIn(root: HTMLElement | null): {
     if (p) videos.add(p);
     if (poster) videos.add(poster);
   });
-  return { images, videos };
+  root?.querySelectorAll<HTMLAudioElement>("audio[data-path]").forEach((a) => {
+    const p = a.getAttribute("data-path");
+    if (p) audios.add(p);
+  });
+  return { images, videos, audios };
 }
 
 type SaveState = "idle" | "saving" | "saved" | "error";
@@ -167,6 +175,8 @@ export function DocumentEditor({
   // Split by bucket because images and videos live in different buckets.
   const knownImagePaths = useRef<Set<string>>(new Set());
   const knownVideoPaths = useRef<Set<string>>(new Set());
+  const knownAudioPaths = useRef<Set<string>>(new Set());
+  const audioInputRef = useRef<HTMLInputElement>(null);
 
   const [title, setTitle] = useState(initialTitle);
   const [save, setSave] = useState<SaveState>("idle");
@@ -197,9 +207,15 @@ export function DocumentEditor({
           .forEach((n) => n.classList.remove("is-selected"));
         clone
           .querySelectorAll(
-            'figure[data-video][data-status], figure[data-link-card][data-status="loading"]',
+            'figure[data-video][data-status], figure[data-audio][data-status], figure[data-link-card][data-status="loading"]',
           )
           .forEach((n) => n.remove());
+        // Reset transient audio playback state so a half-played clip doesn't
+        // persist a stale fill/“playing” flag into the saved HTML.
+        clone.querySelectorAll("figure[data-audio]").forEach((f) => {
+          (f as HTMLElement).style.removeProperty("--played");
+          f.removeAttribute("data-playing");
+        });
         html = clone.innerHTML;
       }
 
@@ -213,14 +229,21 @@ export function DocumentEditor({
       const removedVideos = [...knownVideoPaths.current].filter(
         (p) => !current.videos.has(p),
       );
+      const removedAudios = [...knownAudioPaths.current].filter(
+        (p) => !current.audios.has(p),
+      );
       if (removedImages.length) {
         supabase.storage.from(IMAGE_BUCKET).remove(removedImages);
       }
       if (removedVideos.length) {
         supabase.storage.from(VIDEO_BUCKET).remove(removedVideos);
       }
+      if (removedAudios.length) {
+        supabase.storage.from(AUDIO_BUCKET).remove(removedAudios);
+      }
       knownImagePaths.current = current.images;
       knownVideoPaths.current = current.videos;
+      knownAudioPaths.current = current.audios;
 
       const { error } = await supabase
         .from("documents")
@@ -280,6 +303,7 @@ export function DocumentEditor({
       const seed = mediaPathsIn(editorRef.current);
       knownImagePaths.current = seed.images;
       knownVideoPaths.current = seed.videos;
+      knownAudioPaths.current = seed.audios;
       try {
         document.execCommand("defaultParagraphSeparator", false, "p");
       } catch {
@@ -295,6 +319,58 @@ export function DocumentEditor({
     document.addEventListener("selectionchange", refreshActive);
     return () => document.removeEventListener("selectionchange", refreshActive);
   }, [refreshActive]);
+
+  // ── Audio players ─────────────────────────────────────────────────────
+  // Drive every custom audio player with ONE set of capture-phase listeners on
+  // the editor. Media events (timeupdate/play/pause/…) don't bubble, but the
+  // capture phase still reaches a parent — so this catches events from every
+  // <audio>, including players restored from saved HTML, with no per-element
+  // wiring and no re-hydration after insert. timeupdate drives the --played fill.
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    const fmt = (s: number) => {
+      if (!isFinite(s) || s < 0) s = 0;
+      return `${Math.floor(s / 60)}:${Math.floor(s % 60)
+        .toString()
+        .padStart(2, "0")}`;
+    };
+    const figOf = (e: Event): HTMLElement | null => {
+      const a = e.target as HTMLElement;
+      if (!a || a.tagName !== "AUDIO") return null;
+      return a.closest("figure[data-audio]") as HTMLElement | null;
+    };
+    const setLabel = (fig: HTMLElement, cur: number, dur: number) => {
+      const label = fig.querySelector("[data-audio-time]");
+      if (label) label.textContent = `${fmt(cur)} / ${fmt(dur)}`;
+    };
+    const onTime = (e: Event) => {
+      const fig = figOf(e);
+      if (!fig) return;
+      const a = e.target as HTMLAudioElement;
+      const d = a.duration || 0;
+      fig.style.setProperty("--played", d ? String(a.currentTime / d) : "0");
+      setLabel(fig, a.currentTime, d);
+    };
+    const onMeta = (e: Event) => {
+      const fig = figOf(e);
+      if (fig) setLabel(fig, 0, (e.target as HTMLAudioElement).duration || 0);
+    };
+    const onPlay = (e: Event) => figOf(e)?.setAttribute("data-playing", "");
+    const onStop = (e: Event) => figOf(e)?.removeAttribute("data-playing");
+    editor.addEventListener("timeupdate", onTime, true);
+    editor.addEventListener("loadedmetadata", onMeta, true);
+    editor.addEventListener("play", onPlay, true);
+    editor.addEventListener("pause", onStop, true);
+    editor.addEventListener("ended", onStop, true);
+    return () => {
+      editor.removeEventListener("timeupdate", onTime, true);
+      editor.removeEventListener("loadedmetadata", onMeta, true);
+      editor.removeEventListener("play", onPlay, true);
+      editor.removeEventListener("pause", onStop, true);
+      editor.removeEventListener("ended", onStop, true);
+    };
+  }, []);
 
   // ── Image selection ───────────────────────────────────────────────────
   // Keep the selection ring on exactly the chosen figure.
@@ -323,6 +399,24 @@ export function DocumentEditor({
       range.selectNodeContents(editor);
       range.collapse(false); // end of document
     }
+    // Never insert *inside* a non-editable block (an image/video/audio figure).
+    // If the caret resolved into one, hop out to just after the outermost such
+    // block so media always lands at the top level — otherwise figures nest
+    // inside each other (e.g. a new player landing inside a previous player's
+    // caption/time label), producing invalid HTML that breaks layout.
+    let probe: Node | null = range.startContainer;
+    let nonEditable: HTMLElement | null = null;
+    while (probe && probe !== editor) {
+      if (probe.nodeType === 1 && !(probe as HTMLElement).isContentEditable) {
+        nonEditable = probe as HTMLElement;
+      }
+      probe = probe.parentNode;
+    }
+    if (nonEditable && nonEditable.parentNode) {
+      range = document.createRange();
+      range.setStartAfter(nonEditable);
+      range.collapse(true);
+    }
     // Remember the last node so we can drop the caret after it.
     const last = node.nodeType === 11 ? node.lastChild : node;
     range.insertNode(node);
@@ -347,6 +441,15 @@ export function DocumentEditor({
     knownVideoPaths,
     onError: () => setSave("error"),
   });
+  const { insertAudio, uploadingAudio } = useAudioInsert({
+    supabase,
+    userId,
+    docId,
+    insertNodeAtCaret,
+    scheduleSave,
+    knownAudioPaths,
+    onError: () => setSave("error"),
+  });
   const { tryInsertLinkPreview, handlePreviewClick } = useLinkPreview({
     insertNodeAtCaret,
     scheduleSave,
@@ -363,6 +466,28 @@ export function DocumentEditor({
         box.closest("li")?.toggleAttribute("data-checked");
         scheduleSave();
         return;
+      }
+      // Audio player: play/pause button, or click-to-seek on the waveform.
+      const audioFig = target.closest<HTMLElement>("figure[data-audio]");
+      if (audioFig) {
+        const audioEl = audioFig.querySelector("audio");
+        if (audioEl) {
+          if (target.closest("[data-audio-play]")) {
+            if (audioEl.paused) void audioEl.play();
+            else audioEl.pause();
+          } else {
+            const wave = target.closest<HTMLElement>("[data-waveform]");
+            if (wave && isFinite(audioEl.duration)) {
+              const rect = wave.getBoundingClientRect();
+              const frac = Math.min(
+                1,
+                Math.max(0, (e.clientX - rect.left) / rect.width),
+              );
+              audioEl.currentTime = frac * audioEl.duration;
+            }
+          }
+        }
+        return; // don't fall through to figure selection
       }
       // Link-preview cards: play (inline embed) or open in a new tab.
       if (handlePreviewClick(e)) {
@@ -503,6 +628,13 @@ export function DocumentEditor({
         void insertImage(image);
         return;
       }
+      const audio =
+        files && Array.from(files).find((f) => f.type.startsWith("audio/"));
+      if (audio) {
+        e.preventDefault();
+        void insertAudio(audio);
+        return;
+      }
       const text = e.clipboardData.getData("text/plain");
       // A lone URL becomes a rich preview card; anything else pastes as plain text.
       if (tryInsertLinkPreview(text)) {
@@ -513,7 +645,7 @@ export function DocumentEditor({
       document.execCommand("insertText", false, text);
       scheduleSave();
     },
-    [insertImage, tryInsertLinkPreview, scheduleSave],
+    [insertImage, insertAudio, tryInsertLinkPreview, scheduleSave],
   );
 
   // Caret range at a screen point, but only if it lands inside the editor.
@@ -587,7 +719,10 @@ export function DocumentEditor({
       const all = e.dataTransfer?.files ? Array.from(e.dataTransfer.files) : [];
       const images = all.filter((f) => f.type.startsWith("image/"));
       const videos = all.filter((f) => f.type.startsWith("video/"));
-      if (images.length === 0 && videos.length === 0) return; // let the browser handle other drops
+      const audios = all.filter((f) => f.type.startsWith("audio/"));
+      if (images.length === 0 && videos.length === 0 && audios.length === 0) {
+        return; // let the browser handle other drops
+      }
       e.preventDefault();
       const r = dropRangeAt(e.clientX, e.clientY);
       if (r) {
@@ -597,8 +732,9 @@ export function DocumentEditor({
       }
       images.forEach((f) => void insertImage(f));
       videos.forEach((f) => void insertVideo(f));
+      audios.forEach((f) => void insertAudio(f));
     },
-    [dropRangeAt, insertImage, insertVideo],
+    [dropRangeAt, insertImage, insertVideo, insertAudio],
   );
 
   // ── Checklist ─────────────────────────────────────────────────────────
@@ -952,6 +1088,34 @@ export function DocumentEditor({
             onChange={(e) => {
               const f = e.target.files?.[0];
               if (f) void insertVideo(f);
+              e.target.value = "";
+            }}
+          />
+
+          <button
+            type="button"
+            aria-label="Insert audio"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => audioInputRef.current?.click()}
+            disabled={uploadingAudio}
+            className={`${btn(false)} gap-1.5 disabled:opacity-50`}
+          >
+            {uploadingAudio ? (
+              "Adding…"
+            ) : (
+              <>
+                <AudioFrameIcon className="h-6 w-6 opacity-80" /> Audio
+              </>
+            )}
+          </button>
+          <input
+            ref={audioInputRef}
+            type="file"
+            accept={AUDIO_ACCEPT}
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) void insertAudio(f);
               e.target.value = "";
             }}
           />

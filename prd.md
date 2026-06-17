@@ -45,6 +45,7 @@ We add rows/details here as we adopt them. Nothing is locked beyond what we've a
 | Editor — block model + media embeds (from scratch) | 🧊 Planned | §6 |
 | Folders / organise (many-to-many) | 🔨 In progress | §7 |
 | Trash — restore / permanent delete | ✅ Done | §8 |
+| Audio embeds + custom player (real waveform) | ✅ Done (volume deferred; runtime test pending) | §9 |
 
 Legend: 🔨 in progress · ✅ done · 🧊 planned · ❌ dropped
 
@@ -173,7 +174,58 @@ folders/docs.
 
 ---
 
-## 9. Open questions / assumptions
+## 9. Audio embeds + custom player 🔨
+
+**Goal:** let a doc embed an audio file, played back with a custom player (not the raw
+browser `<audio controls>`), styled with the yolk accent — matching `prd-vision.md` §9.1/§9.3.
+
+**Deviation from `prd-vision.md` §9.1 (recorded deliberately).** The vision spec says the
+waveform must be **decorative** ("do not analyze or measure real audio amplitude… purely
+visual"). We are instead building a **real waveform** (WhatsApp-style: bar heights reflect the
+actual audio amplitude envelope), because it's better UX at near-zero extra cost. `prd-vision.md`
+is left unedited (it's the frozen reference); this living PRD overrides it for the audio feature.
+
+**Resource decision (chosen for least compute / fastest / least bandwidth).** Compute the
+waveform peaks **once, in the uploader's browser, at insert time** — exactly how WhatsApp does it
+(the sender's device computes it). NOT server-side ffmpeg (would spend serverless compute we pay
+for), and NOT client-decode-on-every-view (would re-decode + re-download the whole file each load).
+- On insert: `file.arrayBuffer()` → `AudioContext.decodeAudioData()` → bucket the samples into
+  ~50 bars → take each bucket's peak → normalise to small ints (0–100).
+- Store the bars **on the figure as a data attribute** — `data-peaks="3,7,12,40,…"` — inside the
+  existing `{version:2, html}` content model. ~50 ints ≈ a few hundred bytes. **No schema change.**
+- Every viewer renders bars instantly from `data-peaks`; the `<audio>` element only streams bytes
+  when the user hits play. Per-view compute ≈ drawing rectangles. Server compute = zero.
+- Tradeoff accepted: a very long upload decodes the whole file once in the uploader's browser. Fine
+  for typical clips; a server-side fallback for huge files is a deferred, additive change behind the
+  same `data-peaks` renderer.
+
+**Storage:** new public-read `doc-audio` bucket (`supabase/migrations/0005_create_doc_audio_bucket.sql`),
+owner-scoped write RLS, path scheme `‹uid›/‹docId›/‹id›.‹ext›` — mirrors `doc-images`/`doc-videos`.
+Unlike video, audio is **not transcoded** — the original is stored as-is (no `-raw` temp, no ffmpeg).
+
+**Player UI:** play/pause, the waveform doubling as a seek bar (click/drag to scrub; played bars
+fill yolk, unplayed stay muted), elapsed / total time. Built from scratch as a client component,
+hooked into `document-editor.tsx` via the same media seams as image/video (`mediaPathsIn` extended
+to the third bucket; `purgeDocMedia` sweeps it; paste/drop/click handlers route audio).
+
+**Deferred for now (per user):** the **0–200% volume control** (§9.3). Native `HTMLMediaElement.volume`
+caps at 1.0, so >100% requires routing through a Web Audio `GainNode` — that's the one fiddly piece,
+and we're leaving it out of the first cut. The player ships with play/pause + seek + waveform first.
+
+**Acceptance criteria**
+- AC1: Insert an audio file (button / drag / paste) → it uploads and renders a waveform player; persists across reload.
+- AC2: The waveform reflects the real audio (loud sections = taller bars), computed once at upload.
+- AC3: Play/pause works; the played portion of the waveform fills with the yolk accent as it plays.
+- AC4: Clicking/dragging the waveform seeks to that position.
+- AC5: Deleting the audio (in-editor or via doc purge) removes its file from the `doc-audio` bucket (no orphans).
+
+**Build order:** (1) `doc-audio` bucket migration ✅ applied · (2) insert + upload + waveform compute ✅ ·
+(3) player UI (play/pause, seek, yolk fill) ✅ · (4) editor seams + orphan cleanup ✅ · (5) volume
+GainNode — deferred. **Runtime test pending** (auth-gated).
+
+---
+
+## 10. Open questions / assumptions
 
 - Email OTP = **6-digit code** flow (not magic link). Confirm if you'd prefer the clickable magic link instead.
 - Exact shade of the "Egg-Yolk" accent and other product details are deferred until we reach those features.
