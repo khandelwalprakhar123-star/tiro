@@ -784,6 +784,65 @@ export function DocumentEditor({
   // checklist (new item, or exit the list when the current item is empty).
   const onEditorKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
+      // Backspace at the very start of a block deletes a media embed sitting
+      // just before it. Audio/video/image figures are atomic, non-editable
+      // blocks, so this is the keyboard way to remove them; the next save's
+      // orphan sweep then deletes the underlying file from storage.
+      if (e.key === "Backspace" && !e.shiftKey) {
+        const editor = editorRef.current;
+        const sel = window.getSelection();
+        if (editor && sel && sel.isCollapsed && sel.rangeCount > 0) {
+          const range = sel.getRangeAt(0);
+          const { startContainer, startOffset } = range;
+          let atStart = false;
+          let prev: Node | null = null;
+          if (startContainer === editor) {
+            atStart = true;
+            prev = editor.childNodes[startOffset - 1] ?? null;
+          } else {
+            // Climb to the block that is a direct child of the editor.
+            let block: Node = startContainer;
+            while (block.parentNode && block.parentNode !== editor) {
+              block = block.parentNode;
+            }
+            if (block.parentNode === editor) {
+              const probe = document.createRange();
+              probe.selectNodeContents(block);
+              probe.setEnd(startContainer, startOffset);
+              atStart = probe.toString().length === 0; // no text before caret
+              prev = (block as ChildNode).previousSibling;
+            }
+          }
+          // Skip blank whitespace text nodes between the block and the figure.
+          while (prev && prev.nodeType === 3 && !prev.textContent?.trim()) {
+            prev = prev.previousSibling;
+          }
+          if (
+            atStart &&
+            prev &&
+            prev.nodeType === 1 &&
+            (prev as HTMLElement).matches(
+              "figure[data-audio], figure[data-video], figure[data-img]",
+            )
+          ) {
+            e.preventDefault();
+            // Delete through the editing pipeline (select the figure, then
+            // execCommand) instead of a raw .remove(), so the deletion is
+            // recorded on the browser's native undo stack and Cmd/Ctrl+Z
+            // restores it — matching how video/link inserts undo.
+            const del = document.createRange();
+            del.selectNode(prev);
+            sel.removeAllRanges();
+            sel.addRange(del);
+            document.execCommand("delete");
+            setSelectedFigure(null);
+            setSelectedVideo(null);
+            scheduleSave();
+            return;
+          }
+        }
+      }
+
       if ((e.metaKey || e.ctrlKey) && !e.altKey) {
         const k = e.key.toLowerCase();
         const cmd =

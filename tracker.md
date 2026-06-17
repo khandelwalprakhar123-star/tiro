@@ -181,6 +181,21 @@ plus modified `app/{globals.css,layout.tsx,page.tsx}`, `CLAUDE.md`, `package*.js
 ## Changelog
 
 ### 2026-06-17
+- **Backspace-delete made undoable.** Initial version used `prev.remove()` (raw Node API) → bypassed the
+  contenteditable editing surface, so Cmd/Ctrl+Z couldn't restore it (whereas inserts, which go through
+  `range.insertNode`/`execCommand`, ARE tracked by the native undo stack). Fix: the Backspace handler now
+  selects the figure (`range.selectNode`) and calls `document.execCommand("delete")` — same editing
+  pipeline as inserts, so it lands on the undo stack and Cmd+Z brings the embed back. **Caveat:** the
+  file is swept from storage on the next autosave (~1s), so undo fully works only before that sweep;
+  undo after a save would restore a figure whose file is gone (404). Bulletproof undo needs deferred
+  storage cleanup (a soft media-trash) — noted as a follow-up. `tsc`+`eslint` clean.
+- **Backspace deletes a media embed.** Caret at the start of a block + Backspace now removes an
+  `figure[data-audio|data-video|data-img]` sitting immediately before it (atomic non-editable blocks
+  that browsers won't reliably delete on their own). Added one branch in `onEditorKeyDown`: climb to the
+  caret's editor-child block, confirm the caret is at its start (no text before it), and if the previous
+  element is a media figure, delete it via the editing pipeline + `scheduleSave()` (the save orphan-sweep
+  then deletes the file from storage). Also clears any figure selection. `tsc`+`eslint` clean. Gives audio
+  a delete path (it has no contextual toolbar) and a keyboard delete for image/video too.
 - **Bugfix: media figures nesting on insert (corrupted audio render).** First runtime test showed audio
   players as bare unstyled text. Root cause (found via inspecting saved DOM): a second media insert could
   land with the caret *inside* a previous non-editable figure, jamming the new `<figure>` into the prior
