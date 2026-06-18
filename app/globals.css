@@ -209,6 +209,7 @@ body {
   width: 65%;
   max-width: 100%;
   margin: 1.5rem auto;
+  position: relative; /* anchor for the drag handle */
 }
 .doc-content figure[data-video][data-align="left"] {
   margin-left: 0;
@@ -289,6 +290,7 @@ body {
   border-radius: 0.8rem;
   background: var(--paper);
   user-select: none;
+  position: relative; /* anchor for the drag handle */
 }
 .doc-content figure[data-audio] [data-audio-play] {
   flex: none;
@@ -398,6 +400,7 @@ body {
   background: var(--paper);
   cursor: pointer;
   transition: border-color 140ms ease, box-shadow 140ms ease;
+  position: relative; /* anchor for the drag handle */
 }
 .doc-content figure[data-link-card]:hover {
   border-color: color-mix(in srgb, var(--yolk-deep) 55%, var(--line));
@@ -487,6 +490,53 @@ body {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+/* Media drag handle — a small grip that appears on hover over a video / audio /
+   link-card embed. Dragging it moves the figure horizontally (see
+   onEditorPointerDown); these embeds carry interactive controls, so they can't
+   be grabbed by their body the way images are. Runtime-only chrome: injected by
+   a MutationObserver and stripped from the saved HTML. */
+.doc-content [data-drag-handle] {
+  position: absolute;
+  top: 0.4rem;
+  left: 0.4rem;
+  width: 1.45rem;
+  height: 1.45rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.4rem;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--paper) 90%, transparent);
+  color: var(--ink-soft);
+  cursor: grab;
+  opacity: 0;
+  transition: opacity 120ms ease;
+  z-index: 4;
+  backdrop-filter: blur(2px);
+}
+/* The play button sits at the audio player's left, so move its handle to the
+   right (over the non-interactive time readout) to avoid covering it. */
+.doc-content figure[data-audio] [data-drag-handle] {
+  left: auto;
+  right: 0.4rem;
+}
+/* "↔" signals the horizontal-only movement. */
+.doc-content [data-drag-handle]::before {
+  content: "↔";
+  font-size: 0.9rem;
+  line-height: 1;
+}
+.doc-content figure[data-video]:hover [data-drag-handle],
+.doc-content figure[data-audio]:hover [data-drag-handle],
+.doc-content figure[data-link-card]:hover [data-drag-handle],
+.doc-content figure.is-dragging [data-drag-handle] {
+  opacity: 1;
+}
+.doc-content [data-drag-handle]:active,
+.doc-content figure.is-dragging [data-drag-handle] {
+  cursor: grabbing;
 }
 
 /* Checklist (a list type in the toolbar). The box is a clickable square; when
