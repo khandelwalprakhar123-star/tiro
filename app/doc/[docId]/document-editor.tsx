@@ -12,6 +12,14 @@ import { useAudioInsert, AUDIO_BUCKET, AUDIO_ACCEPT } from "@/lib/use-audio-inse
 import { useLinkPreview } from "@/lib/use-link-preview";
 import { exportDocumentToPdf } from "@/lib/export-pdf";
 import {
+  FONTS,
+  applyFontFamily,
+  applyFontSize,
+  currentFontId,
+  currentSize,
+  DEFAULT_SIZE,
+} from "@/lib/inline-style";
+import {
   AudioFrameIcon,
   ChecklistIcon,
   ExportIcon,
@@ -73,6 +81,8 @@ type ActiveMarks = {
   ordered: boolean;
   align: Align;
   heading: number | null; // 1–5, or null for normal paragraph
+  fontId: string; // catalogue id of the selection's font, or "default"/"custom"
+  fontSize: number; // size label at the caret (Word-style scale; body = 11)
 };
 
 const EMPTY_ACTIVE: ActiveMarks = {
@@ -83,6 +93,8 @@ const EMPTY_ACTIVE: ActiveMarks = {
   ordered: false,
   align: "left",
   heading: null,
+  fontId: "default",
+  fontSize: DEFAULT_SIZE,
 };
 
 // Shared toolbar button styling (used by plain buttons and the dropdown triggers).
@@ -300,6 +312,8 @@ export function DocumentEditor({
       ordered: document.queryCommandState("insertOrderedList"),
       align,
       heading,
+      fontId: currentFontId(editor),
+      fontSize: currentSize(editor),
     });
   }, []);
 
@@ -611,6 +625,36 @@ export function DocumentEditor({
     [active.heading, exec],
   );
 
+  // ── Font family + size (selection-based, Word-style) ──────────────────────
+  // Both apply inline styles to the selected text via lib/inline-style (which
+  // works around execCommand's font limitations). No-op on a bare caret — these
+  // act on a selection. refreshActive then re-reads the selection for the UI.
+  const setFont = useCallback(
+    (value: string) => {
+      const editor = editorRef.current;
+      if (!editor) return;
+      editor.focus();
+      if (applyFontFamily(editor, value)) {
+        refreshActive();
+        scheduleSave();
+      }
+    },
+    [refreshActive, scheduleSave],
+  );
+
+  const nudgeSize = useCallback(
+    (delta: number) => {
+      const editor = editorRef.current;
+      if (!editor) return;
+      editor.focus();
+      if (applyFontSize(editor, currentSize(editor) + delta)) {
+        refreshActive();
+        scheduleSave();
+      }
+    },
+    [refreshActive, scheduleSave],
+  );
+
   // The single funnel for every insert path (button / paste / drop): compress
   // in the browser, upload to ‹uid›/‹docId›/‹id›.webp, then drop a block figure.
   const insertImage = useCallback(
@@ -881,6 +925,7 @@ export function DocumentEditor({
 
   // ── Toolbar button helper ─────────────────────────────────────────────
   const btn = toolbarBtnClass;
+  const activeFont = FONTS.find((f) => f.id === active.fontId) ?? null;
 
   // Keyboard: ⌘/Ctrl + E / L / R align shortcuts, and Enter behaviour inside a
   // checklist (new item, or exit the list when the current item is empty).
@@ -1051,6 +1096,68 @@ export function DocumentEditor({
 
         {/* Formatting toolbar (sticky so it stays reachable while scrolling) */}
         <div className="sticky top-3 z-10 mt-6 flex flex-wrap items-center justify-center gap-1 rounded-[0.9rem] border border-line bg-paper/90 p-2 backdrop-blur">
+          {/* Font family — applies to the selected text. Each item previews its
+              own typeface; the trigger shows the current selection's font. */}
+          <ToolbarMenu
+            title="Font"
+            active={active.fontId !== "default"}
+            trigger={
+              <span
+                className="max-w-[7ch] truncate text-base"
+                style={{ fontFamily: activeFont?.value || "inherit" }}
+              >
+                {activeFont ? activeFont.label : "Font"}
+              </span>
+            }
+          >
+            {(close) => (
+              <>
+                {FONTS.map((f) => (
+                  <MenuItem
+                    key={f.id}
+                    active={active.fontId === f.id}
+                    onClick={() => {
+                      setFont(f.value);
+                      close();
+                    }}
+                  >
+                    <span style={{ fontFamily: f.value || "inherit" }}>
+                      {f.label}
+                    </span>
+                  </MenuItem>
+                ))}
+              </>
+            )}
+          </ToolbarMenu>
+
+          {/* Font size — two steppers (±1) around the current size. Selection-
+              based; the number reflects the size at the caret (body = 11). */}
+          <div className="flex items-center" title="Font size">
+            <button
+              type="button"
+              aria-label="Decrease font size"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => nudgeSize(-1)}
+              className="flex h-11 w-8 items-center justify-center rounded-lg text-xl text-ink transition-colors hover:bg-paper-deep"
+            >
+              −
+            </button>
+            <span className="min-w-[2ch] text-center text-sm tabular-nums text-ink">
+              {active.fontSize}
+            </span>
+            <button
+              type="button"
+              aria-label="Increase font size"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => nudgeSize(1)}
+              className="flex h-11 w-8 items-center justify-center rounded-lg text-xl text-ink transition-colors hover:bg-paper-deep"
+            >
+              +
+            </button>
+          </div>
+
+          <span className="mx-1 h-6 w-px bg-line" />
+
           <button
             type="button"
             aria-label="Bold"

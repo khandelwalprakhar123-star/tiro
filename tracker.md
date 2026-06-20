@@ -28,7 +28,9 @@
 - Next.js **16.2.9** (App Router) + React 19 + TypeScript + Turbopack
 - Tailwind CSS v4 (config via `@theme` in `app/globals.css`)
 - Supabase (`@supabase/supabase-js` + `@supabase/ssr`) — cookie-based auth
-- Fonts: **Fraunces** (display serif) + **Hanken Grotesk** (body) via `next/font/google`
+- Fonts: **Fraunces** (display serif) + **Hanken Grotesk** (body) via `next/font/google`; plus
+  **Lora, Source Serif 4, Inter, JetBrains Mono** loaded for the editor's per-selection font picker
+  (branch `feat/font-editing`)
 
 **Supabase project (ACTIVE):**
 - Name: **DeeScribe** · ref **`rgryvohgicykwuxnwnhe`** · region **`ap-south-1` (Mumbai)**
@@ -208,6 +210,52 @@ work** lives on branch `feat/video` in worktree `.claude/worktrees/video` (separ
 ---
 
 ## Changelog
+
+### 2026-06-20
+- **Font editing — per-selection font family + size (feature branch `feat/font-editing`).**
+  New left-most toolbar controls: a **font-family dropdown** and a **size stepper** (`−` / number / `+`,
+  ±1). Both are **selection-based** (Word/Google-Docs model) — they style the highlighted text, not the
+  whole document. A bare caret is a no-op (acts on a selection only).
+  - **Why a custom primitive (`lib/inline-style.ts`):** `execCommand` can't do this directly —
+    `fontSize` only accepts the legacy **1–7** scale (not `18px`) and `fontName` mangles custom
+    `var(--font-*)` family values. Approach: use `execCommand("fontSize","7")` purely as a **marker** to
+    let the browser wrap exactly the selection (it handles all multi-node/block boundary math), then
+    **rewrite each `<font size="7">` into a `<span>`** carrying the real inline style we want. One
+    primitive (`styleSelection`) powers both family and size. On each apply we **strip the same property
+    from descendant spans** (and unwrap now-empty spans) so repeated nudges don't stack `<span>`s, and we
+    **re-select the rewritten range** so the user can keep nudging without re-highlighting.
+  - **Size scale (decision):** the toolbar shows an abstract Word-style number; **body default = 11**,
+    anchored to the current `.doc-content` size (**1.125rem = 18px**) so existing docs don't visually
+    jump. `sizeToPx`/`pxToSize` convert (each ±1 step ≈ 1.64px); clamped to **6–96**. The displayed
+    number reflects the **computed** font-size at the caret (so headings read larger, etc.).
+  - **Fonts loaded:** added **Lora, Source Serif 4, Inter, JetBrains Mono** via `next/font/google` in
+    `app/layout.tsx` (CSS vars `--font-lora`, `--font-source-serif`, `--font-inter`, `--font-jetbrains`),
+    joining the existing Fraunces/Hanken. Catalogue (`FONTS` in `lib/inline-style.ts`) also offers
+    **Default** (inherit), Fraunces, Hanken Grotesk, and the **system fonts** (no load, fallback stacks):
+    **Georgia, Times New Roman, Arial, Calibri, Helvetica** — 12 options total. Inline family values
+    reference the `var(--font-*)` so no `<font>`/var mangling. (Calibri isn't on macOS → degrades to
+    Segoe UI/sans-serif there.)
+  - **Toolbar reflection:** `ActiveMarks` gained `fontId` + `fontSize`; `refreshActive` reads them
+    (`currentFontId` matches the nearest inline family against the catalogue → `default`/`custom`;
+    `currentSize` maps computed px → label) so the dropdown trigger shows the selection's font and the
+    stepper shows its size. Saved HTML needs no changes — the spans persist via the existing serialize.
+  - **Files:** `lib/inline-style.ts` (new), `app/layout.tsx` (4 fonts + html vars),
+    `app/doc/[docId]/document-editor.tsx` (imports, `ActiveMarks`/`EMPTY_ACTIVE`, `refreshActive`,
+    `setFont`/`nudgeSize` handlers, font menu + size stepper at the toolbar's left edge before Bold).
+  - **Verification:** `tsc --noEmit` clean; **`next build` passes** (all four Google fonts resolved &
+    self-hosted). Font family + the 4 added fonts confirmed working in-browser. Not yet merged to `main`.
+  - **Bugfix (post-test, 2026-06-20):** the size stepper appeared frozen at 11 and couldn't step past one
+    increment, and the font dropdown silently reverted to "Default" after each apply. Root cause: after
+    applying a style we re-select the new span with `range.setStartBefore(span)`, so the selection's
+    boundary `startContainer` is the *container* (doc-default font), not the styled span — and both
+    `currentSize`/`currentFontId` read that container. Since `nudgeSize` bases the next size on
+    `currentSize + delta`, it recomputed `11 + 1 = 12` every click → stuck. Fix: a `selectionElement()`
+    helper that descends into `startContainer.childNodes[startOffset]` to read the actual styled element.
+    Verified in a standalone Playwright harness: stepping now climbs 11→12→13→14→15 and back, leaving a
+    single clean `<span>` (no nesting).
+  - **Known limitations (v1):** collapsed-caret changes are no-ops (selection required); selecting the
+    **Default** font leaves an empty wrapper span (harmless, no visual effect); PDF export
+    (`lib/export-pdf.ts`) doesn't yet honor inline font family/size.
 
 ### 2026-06-17
 - **Export to PDF — opens in a new browser tab, never downloads (feature branch `feat/export-pdf`).**
