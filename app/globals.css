@@ -591,9 +591,22 @@ body {
   animation: tool-fade-in 160ms ease-out;
 }
 
-/* Placeholder shown when the editor is empty. */
+/* Placeholder for an empty doc — must sit on the SAME line as the caret.
+   Two cases:
+   1) a truly empty editor: the caret is directly in .doc-content, so a
+      ::before on the container renders inline, on the caret's line.
+   2) a new doc seeded with a single empty <p><br></p>: here the caret lives
+      inside the <p>. A ::before on the container would be pushed onto its own
+      line ABOVE the paragraph, so instead we put the ::before on the <p>
+      itself, where it flows inline right at the caret. (attr() can't reach the
+      container's data-placeholder from the <p>, so the text is inline here.) */
 .doc-content:empty::before {
   content: attr(data-placeholder);
+  color: color-mix(in srgb, var(--ink) 25%, transparent);
+  pointer-events: none;
+}
+.doc-content > p:only-child:has(> br:only-child)::before {
+  content: "Start writing…";
   color: color-mix(in srgb, var(--ink) 25%, transparent);
   pointer-events: none;
 }

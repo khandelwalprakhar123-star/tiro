@@ -212,6 +212,21 @@ work** lives on branch `feat/video` in worktree `.claude/worktrees/video` (separ
 ## Changelog
 
 ### 2026-06-20
+- **Bugfix — first typed line in a new doc had wrong spacing.** A brand-new doc seeded the editor
+  with `""`, so the **first line you typed went in as a bare text node** (no `<p>` wrapper); only after
+  pressing Enter did the browser start emitting real `<p>` blocks (`defaultParagraphSeparator="p"`).
+  Since only `<p>` carries the `.doc-content p` bottom margin, the first line hugged the second while
+  every later line got the paragraph gap. **Fix (2 coordinated changes):** (1) seed empty docs with
+  `<p><br></p>` instead of `""` (`document-editor.tsx` mount) so the first line is a real paragraph;
+  (2) move the "Start writing…" placeholder onto that seeded paragraph in `globals.css`. The old rule
+  hung the placeholder on the `.doc-content` container (`:empty::before`); with the seed the caret now
+  lives inside a `<p>`, so a container `::before` got pushed onto its own line *above* the caret. Fix:
+  add `.doc-content > p:only-child:has(> br:only-child)::before { content: "Start writing…" }` so the
+  placeholder flows inline on the paragraph, on the caret's line (literal string because `attr()` can't
+  read the container's `data-placeholder` from the `<p>`). Kept `:empty::before` for the truly-empty case.
+  Existing docs unaffected (they already have `<p>` content); seeding on mount doesn't trigger a save.
+  Verified in a browser harness: typing `word 0`⏎`word 1 word 2`⏎`line 1` yields three uniform `<p>`
+  blocks; placeholder renders on the caret's line and clears on the first keystroke.
 - **Font editing — per-selection font family + size (feature branch `feat/font-editing`).**
   New left-most toolbar controls: a **font-family dropdown** and a **size stepper** (`−` / number / `+`,
   ±1). Both are **selection-based** (Word/Google-Docs model) — they style the highlighted text, not the

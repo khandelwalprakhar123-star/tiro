@@ -320,7 +320,13 @@ export function DocumentEditor({
   // Mount: seed the editor HTML once, and prefer <p> for new paragraphs.
   useEffect(() => {
     if (editorRef.current) {
-      editorRef.current.innerHTML = initialHtml;
+      // Seed a brand-new (empty) doc with one real paragraph rather than "".
+      // Typing into a truly empty contenteditable drops the first line in as a
+      // bare text node (no <p>), so it misses the .doc-content p margin and hugs
+      // the next line. Starting with <p><br></p> makes the first line a proper
+      // paragraph like every line after it. The placeholder CSS still fires for
+      // this single-empty-paragraph case (see .doc-content :has() rule).
+      editorRef.current.innerHTML = initialHtml || "<p><br></p>";
       // Seed the known-media sets from what the doc opened with, so later
       // deletions can be detected and cleaned out of storage.
       const seed = mediaPathsIn(editorRef.current);
