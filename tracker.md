@@ -224,6 +224,10 @@ work** lives on branch `feat/video` in worktree `.claude/worktrees/video` (separ
   add `.doc-content > p:only-child:has(> br:only-child)::before { content: "Start writing…" }` so the
   placeholder flows inline on the paragraph, on the caret's line (literal string because `attr()` can't
   read the container's `data-placeholder` from the `<p>`). Kept `:empty::before` for the truly-empty case.
+  Follow-up: the inline `::before` occupied real space, so the browser drew the **caret after** the
+  placeholder text (you had to backspace to reach the start). Made the paragraph `position: relative`
+  and the placeholder `position: absolute; top/left: 0` so it's a paint-only overlay with no inline
+  footprint — caret now sits at the true start (left of the "S"), like a normal input placeholder.
   Existing docs unaffected (they already have `<p>` content); seeding on mount doesn't trigger a save.
   Verified in a browser harness: typing `word 0`⏎`word 1 word 2`⏎`line 1` yields three uniform `<p>`
   blocks; placeholder renders on the caret's line and clears on the first keystroke.

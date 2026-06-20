@@ -605,8 +605,14 @@ body {
   color: color-mix(in srgb, var(--ink) 25%, transparent);
   pointer-events: none;
 }
+.doc-content > p:only-child:has(> br:only-child) {
+  position: relative;
+}
 .doc-content > p:only-child:has(> br:only-child)::before {
   content: "Start writing…";
+  position: absolute;
+  left: 0;
+  top: 0;
   color: color-mix(in srgb, var(--ink) 25%, transparent);
   pointer-events: none;
 }
