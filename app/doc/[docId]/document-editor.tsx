@@ -195,6 +195,18 @@ export function DocumentEditor({
 
   const [title, setTitle] = useState(initialTitle);
   const [save, setSave] = useState<SaveState>("idle");
+  // Transient banner for media notices — a validation error (e.g. video too
+  // long) or a non-blocking warning (e.g. an HEVC clip may not play elsewhere).
+  const [notice, setNotice] = useState<{
+    kind: "error" | "warn";
+    text: string;
+  } | null>(null);
+  const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const showNotice = useCallback((kind: "error" | "warn", text: string) => {
+    setNotice({ kind, text });
+    if (noticeTimer.current) clearTimeout(noticeTimer.current);
+    noticeTimer.current = setTimeout(() => setNotice(null), 7000);
+  }, []);
   const [deleting, setDeleting] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -505,7 +517,12 @@ export function DocumentEditor({
     insertNodeAtCaret,
     scheduleSave,
     knownVideoPaths,
-    onError: () => setSave("error"),
+    onError: (err) =>
+      showNotice(
+        "error",
+        err instanceof Error ? err.message : "Couldn't add that video.",
+      ),
+    onWarn: (text) => showNotice("warn", text),
   });
   const { insertAudio, uploadingAudio } = useAudioInsert({
     supabase,
@@ -867,24 +884,75 @@ export function DocumentEditor({
   // clicking the box toggles li[data-checked] (see onEditorClick), and Enter
   // inside one adds a new item / exits when empty (see onEditorKeyDown).
   const insertChecklist = useCallback(() => {
-    const ul = document.createElement("ul");
-    ul.setAttribute("data-checklist", "");
-    const li = document.createElement("li");
-    const box = document.createElement("span");
-    box.setAttribute("data-check", "");
-    box.setAttribute("contenteditable", "false");
-    li.appendChild(box);
-    ul.appendChild(li);
-    insertNodeAtCaret(ul);
-    const sel = window.getSelection();
-    const range = document.createRange();
-    range.setStartAfter(box);
-    range.collapse(true);
-    sel?.removeAllRanges();
-    sel?.addRange(range);
-    editorRef.current?.focus();
+    const editor = editorRef.current;
+    if (!editor) return;
+    editor.focus();
+
+    // Find the <ul> the caret/selection currently sits in (if any).
+    const closestUl = (): HTMLElement | null => {
+      const a = window.getSelection()?.anchorNode ?? null;
+      const el = a && (a.nodeType === 1 ? (a as HTMLElement) : a.parentElement);
+      const ul = el?.closest("ul") ?? null;
+      return ul && editor.contains(ul) ? (ul as HTMLElement) : null;
+    };
+
+    // Chromium's insertUnorderedList can leave the new <ul> wrapped in a <p>
+    // (invalid: <ul> inside <p> → the browser splits it on reload, leaving a
+    // stray empty line above the list). Hoist the list out so it's a direct
+    // child of the editor.
+    const unwrap = (ul: HTMLElement) => {
+      let p = ul.parentElement;
+      while (p && p !== editor && p.tagName !== "LI") {
+        p.querySelectorAll(":scope > br").forEach((br) => br.remove());
+        if (p.childNodes.length === 1) p.replaceWith(ul);
+        else p.after(ul);
+        p = ul.parentElement;
+      }
+    };
+
+    // Give every <li> in a list a non-editable check box (idempotent).
+    const decorate = (ul: HTMLElement) => {
+      ul.setAttribute("data-checklist", "");
+      ul.querySelectorAll<HTMLLIElement>(":scope > li").forEach((li) => {
+        if (!li.querySelector(":scope > [data-check]")) {
+          const box = document.createElement("span");
+          box.setAttribute("data-check", "");
+          box.setAttribute("contenteditable", "false");
+          li.insertBefore(box, li.firstChild);
+        }
+      });
+    };
+
+    // Strip the checklist decoration so the list can toggle back to paragraphs.
+    const undecorate = (ul: HTMLElement) => {
+      ul.removeAttribute("data-checklist");
+      ul.querySelectorAll("[data-check]").forEach((b) => b.remove());
+      ul.querySelectorAll("li[data-checked]").forEach((li) =>
+        li.removeAttribute("data-checked"),
+      );
+    };
+
+    const existing = closestUl();
+    if (existing?.hasAttribute("data-checklist")) {
+      // Already a checklist → toggle OFF (back to plain paragraphs).
+      undecorate(existing);
+      document.execCommand("insertUnorderedList");
+    } else if (existing) {
+      // A plain bullet list → convert it into a checklist (don't un-list).
+      decorate(existing);
+    } else {
+      // Plain paragraph(s) → let the browser turn the selected block(s) into a
+      // <ul><li>…</li></ul> (it handles multi-line selections, splitting, and
+      // caret placement), then decorate the new list as a checklist.
+      document.execCommand("insertUnorderedList");
+      const ul = closestUl();
+      if (ul) {
+        unwrap(ul);
+        decorate(ul);
+      }
+    }
     scheduleSave();
-  }, [insertNodeAtCaret, scheduleSave]);
+  }, [scheduleSave]);
 
   // ── Export to PDF ─────────────────────────────────────────────────────
   // Build a PDF from the document and open it in a NEW TAB for viewing (never a
@@ -1084,6 +1152,29 @@ export function DocumentEditor({
             </button>
           </div>
         </header>
+
+        {/* Transient media notice (validation error / HEVC warning). */}
+        {notice && (
+          <div
+            role="status"
+            className={`mt-4 flex items-start gap-2 rounded-2xl border px-4 py-3 text-sm ${
+              notice.kind === "error"
+                ? "border-red-200 bg-red-50 text-red-800"
+                : "border-amber-200 bg-amber-50 text-amber-900"
+            }`}
+          >
+            <span aria-hidden>{notice.kind === "error" ? "⚠" : "ⓘ"}</span>
+            <span className="flex-1">{notice.text}</span>
+            <button
+              type="button"
+              onClick={() => setNotice(null)}
+              className="text-current/60 transition-opacity hover:opacity-70"
+              aria-label="Dismiss"
+            >
+              ✕
+            </button>
+          </div>
+        )}
 
         {/* Title */}
         <input

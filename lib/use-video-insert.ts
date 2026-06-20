@@ -1,22 +1,20 @@
 "use client";
 
-// Client orchestration for inserting a video. Mirrors the image flow's shape
-// (one funnel for button/drop) but the heavy lifting — compression — happens in
-// a server action. Steps:
-//   1. drop an optimistic "Uploading…/Compressing…" placeholder at the caret
-//   2. upload the RAW file straight to storage (no server-action body limit)
-//   3. call compressVideo(path) → server transcodes, returns the mp4 + poster
+// Client orchestration for inserting a video. Mirrors the audio flow: ALL work
+// happens in the browser — there is no server action and no ffmpeg. Steps:
+//   1. drop an optimistic "Adding…" placeholder at the caret
+//   2. prepare in-browser: validate size/duration, grab a poster frame, flag HEVC
+//   3. upload the ORIGINAL file (as-is) + the poster straight to storage
 //   4. swap the placeholder for a real <video>
-// On any failure we remove the placeholder and surface the error.
+// On any failure we remove the placeholder and surface the reason.
 
 import { useCallback, useRef, useState } from "react";
 import type { RefObject } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { compressVideo } from "@/lib/video-actions";
+import { prepareVideo } from "@/lib/video-prepare";
 
 export const VIDEO_BUCKET = "doc-videos";
 export const VIDEO_ACCEPT = "video/*";
-const MAX_BYTES = 500 * 1024 * 1024; // 500 MB — matches the bucket's cap.
 
 function newId() {
   return typeof crypto !== "undefined" && crypto.randomUUID
@@ -24,8 +22,8 @@ function newId() {
     : `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
 }
 
-// Best-effort file extension for the raw upload (helps ffmpeg sniff the format).
-function rawExt(file: File) {
+// File extension for the stored upload, sniffed from the name or MIME type.
+function fileExt(file: File) {
   const fromName = file.name.includes(".")
     ? file.name.split(".").pop()!.toLowerCase()
     : "";
@@ -44,6 +42,8 @@ type Options = {
   // sweep doesn't mistake a just-added video for a deleted one).
   knownVideoPaths: RefObject<Set<string>>;
   onError: (err: unknown) => void;
+  // Non-blocking notice (e.g. the HEVC cross-browser caveat).
+  onWarn?: (text: string) => void;
 };
 
 export function useVideoInsert({
@@ -54,8 +54,9 @@ export function useVideoInsert({
   scheduleSave,
   knownVideoPaths,
   onError,
+  onWarn,
 }: Options) {
-  // Count in-flight uploads so the toolbar button can show a busy state even
+  // Count in-flight inserts so the toolbar button can show a busy state even
   // with several drops at once.
   const [pending, setPending] = useState(0);
   const pendingRef = useRef(0);
@@ -67,10 +68,6 @@ export function useVideoInsert({
   const insertVideo = useCallback(
     async (file: File) => {
       if (!file.type.startsWith("video/")) return;
-      if (file.size > MAX_BYTES) {
-        onError(new Error("Video is larger than the 500 MB limit"));
-        return;
-      }
 
       const id = newId();
 
@@ -81,7 +78,7 @@ export function useVideoInsert({
       placeholder.contentEditable = "false";
       placeholder.innerHTML = `<div data-video-loading><span data-spinner></span><span data-video-label></span></div>`;
       const label = placeholder.querySelector("[data-video-label]")!;
-      label.textContent = `Uploading “${file.name}”…`;
+      label.textContent = `Adding “${file.name}”…`;
 
       const trailing = document.createElement("p");
       trailing.appendChild(document.createElement("br"));
@@ -92,27 +89,48 @@ export function useVideoInsert({
 
       bump(1);
       try {
-        // 2) Upload the raw original straight to storage.
-        const rawPath = `${userId}/${docId}/${id}-raw.${rawExt(file)}`;
+        // 2) Prepare in-browser (validates size + 60s cap, grabs a poster).
+        const prepared = await prepareVideo(file);
+        if (prepared.warning) onWarn?.(prepared.warning);
+
+        // 3) Upload the original file as-is, plus the poster (if we got one).
+        const ext = fileExt(file);
+        const path = `${userId}/${docId}/${id}.${ext}`;
         const { error: upErr } = await supabase.storage
           .from(VIDEO_BUCKET)
-          .upload(rawPath, file, {
+          .upload(path, file, {
             contentType: file.type || "application/octet-stream",
             upsert: false,
           });
         if (upErr) throw upErr;
 
-        // 3) Server-side transcode.
-        label.textContent = "Compressing… this can take a moment";
-        placeholder.setAttribute("data-status", "processing");
-        const result = await compressVideo({ rawPath, docId, id });
+        let posterPath: string | null = null;
+        let posterUrl: string | null = null;
+        if (prepared.poster) {
+          posterPath = `${userId}/${docId}/${id}.jpg`;
+          const { error: pErr } = await supabase.storage
+            .from(VIDEO_BUCKET)
+            .upload(posterPath, prepared.poster, {
+              contentType: "image/jpeg",
+              upsert: true,
+            });
+          if (pErr) {
+            posterPath = null; // poster is optional — don't fail the insert
+          } else {
+            posterUrl = supabase.storage
+              .from(VIDEO_BUCKET)
+              .getPublicUrl(posterPath).data.publicUrl;
+          }
+        }
+        const url = supabase.storage.from(VIDEO_BUCKET).getPublicUrl(path).data
+          .publicUrl;
 
         // 4) Swap in the real <video>. If the placeholder was deleted while we
         // worked, clean up the just-uploaded files instead of orphaning them.
         if (!placeholder.isConnected) {
-          await supabase.storage
-            .from(VIDEO_BUCKET)
-            .remove([result.path, result.posterPath]);
+          const toRemove = [path];
+          if (posterPath) toRemove.push(posterPath);
+          await supabase.storage.from(VIDEO_BUCKET).remove(toRemove);
           return;
         }
 
@@ -125,17 +143,17 @@ export function useVideoInsert({
         video.setAttribute("controls", "");
         video.setAttribute("preload", "metadata");
         video.setAttribute("playsinline", "");
-        video.poster = result.posterUrl;
-        video.src = result.url;
-        video.setAttribute("data-path", result.path);
-        video.setAttribute("data-poster-path", result.posterPath);
-        if (result.width) video.width = result.width;
-        if (result.height) video.height = result.height;
+        if (posterUrl) video.poster = posterUrl;
+        video.src = url;
+        video.setAttribute("data-path", path);
+        if (posterPath) video.setAttribute("data-poster-path", posterPath);
+        if (prepared.width) video.width = prepared.width;
+        if (prepared.height) video.height = prepared.height;
         figure.appendChild(video);
 
         placeholder.replaceWith(figure);
-        knownVideoPaths.current.add(result.path);
-        knownVideoPaths.current.add(result.posterPath);
+        knownVideoPaths.current.add(path);
+        if (posterPath) knownVideoPaths.current.add(posterPath);
         scheduleSave();
       } catch (err) {
         placeholder.remove();
@@ -153,6 +171,7 @@ export function useVideoInsert({
       scheduleSave,
       knownVideoPaths,
       onError,
+      onWarn,
     ],
   );
 

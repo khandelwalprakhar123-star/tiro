@@ -138,8 +138,8 @@ work** lives on branch `feat/video` in worktree `.claude/worktrees/video` (separ
 | Path | Purpose |
 |---|---|
 | `lib/compress-image.ts` | Client image compression → WebP (EXIF-baked, ≤1600px) before upload to `doc-images`. |
-| `lib/use-video-insert.ts` | Client video insert: raw upload to `doc-videos` → server `compressVideo` → swap in `<video controls>`. |
-| `lib/video-actions.ts` | `"use server"` ffmpeg transcode (H.264/CRF20/≤1080p) + poster. **Local-dev only** — breaks on Vercel serverless (see caveats); hardening on `feat/video`. |
+| `lib/use-video-insert.ts` | Client video insert (NO server, NO ffmpeg): `prepareVideo` → upload original file as-is + poster to `doc-videos` → swap in `<video controls>`. |
+| `lib/video-prepare.ts` | Client-only video prep (mirrors `audio-prepare`): validate ≤60 s + ≤200 MB, grab a poster frame via `<video>`→`<canvas>`, best-effort HEVC warning. No server/ffmpeg. |
 | `lib/audio-prepare.ts` | Client-only audio: `decodeAudioData` → ~56 waveform peaks + ≤60 s cap (≤60 s keeps original; >60 s trims to WAV). No server/ffmpeg. |
 | `lib/use-audio-insert.ts` | Client audio insert + `buildAudioFigure` (player markup w/ `data-peaks`); upload to `doc-audio`. |
 | `lib/unfurl-actions.ts` · `lib/use-link-preview.ts` | Pasted-URL link-preview cards (`"use server"` OpenGraph/oEmbed unfurl + SSRF guards; client card build + delegated play/open). |
@@ -195,8 +195,10 @@ work** lives on branch `feat/video` in worktree `.claude/worktrees/video` (separ
       nest/restore. (Plumbing works in runtime; no formal pass recorded.)
 - [ ] **Audio follow-ups (deferred):** 0–200 % volume via Web Audio `GainNode` (§9.3); bulletproof undo via
       deferred storage cleanup / soft media-trash (currently eager sweep → late-undo can 404, no orphans).
-- [ ] **Video — production transcode** (🔴): `compressVideo` spawns native ffmpeg → breaks on Vercel. Plus
-      spawn-timeout + raw-orphan-on-failure hardening. Being handled on `feat/video` (see `HANDOFF-video.md`).
+- [x] **Video — production-safe (ffmpeg removed)** (2026-06-20): dropped the server-side `compressVideo`
+      transcode entirely and moved video to the **audio model** — original file stored as-is + a
+      client-captured poster, ≤60 s + ≤200 MB caps, HEVC warning. No serverless timeout liability.
+      Trade-off accepted: no compression; HEVC `.mov` may not play outside Safari (warned, not blocked).
 - [ ] **Optional perf:** switch proxy `getUser()` → `getClaims()` to drop the last ~375 ms/nav (tradeoff:
       revoked sessions valid until token expiry). Deferred — kept as the authoritative gate.
 - [x] **Responsive pass — page chrome** (2026-06-15): workspace/folder/trash headers + title rows now
@@ -212,6 +214,49 @@ work** lives on branch `feat/video` in worktree `.claude/worktrees/video` (separ
 ## Changelog
 
 ### 2026-06-20
+- **Bugfix — checklist deleted the selected lines instead of converting them.** Selecting several lines
+  and clicking Checklist wiped them and left one empty box with a glitched caret. Root cause: `insertChecklist`
+  built a fresh empty `<ul><li>` and called `insertNodeAtCaret`, which does `range.deleteContents()` first —
+  so a multi-line selection was deleted and replaced by the empty list. Checklist now **converts** the
+  selection like the bullet button does: `execCommand("insertUnorderedList")` (the browser handles multi-line
+  selection, block splitting, and caret placement), then it tags the new list `data-checklist` and gives each
+  `<li>` a non-editable `[data-check]` box. Added: (1) **toggle behaviour** — clicking on an existing checklist
+  turns it back into paragraphs; clicking on a plain bullet list converts it to a checklist in place; (2) an
+  **`unwrap` step** because Chromium can leave the new `<ul>` wrapped in a `<p>` (invalid `<ul>`-in-`<p>` → on
+  reload the browser splits it, leaving a stray empty line above the list — the artifact visible in the bug
+  screenshot). `tsc` + `eslint` clean. **Verified in a real-browser harness** (Playwright): 3 paragraphs →
+  3 checklist items with text preserved + clean top-level `<ul>` (no `<p>` wrapper); toggle-off restores the
+  lines with no orphan boxes; bullet list → checklist decorates in place. NOTE: docs already corrupted by the
+  old behaviour aren't auto-repaired — delete the stray box and re-apply.
+- **Video goes ffmpeg-free — production-safe, matching the audio model.** Removed the server-side
+  transcode that was the Vercel serverless liability (a long `preset slow` ffmpeg encode runs past the
+  function's execution limit and gets killed mid-flight → the upload silently vanishes + leaks a `-raw`
+  orphan). It "worked on the live site" only because test clips were short enough to finish under the
+  timeout — a ceiling, not a wall. **Now there is no server compute to time out.**
+  - **Deleted:** `lib/video-actions.ts` (the `"use server"` ffmpeg transcode), `lib/vendor.d.ts` (its
+    ffprobe ambient type), the `ffmpeg-static` + `ffprobe-static` deps, and `serverExternalPackages` from
+    `next.config.ts`.
+  - **New `lib/video-prepare.ts`** (client-only, mirrors `lib/audio-prepare.ts`): loads the file into a
+    detached `<video>`, validates **≤60 s** (same cap as audio) and **≤200 MB**, captures a **poster frame**
+    via `<canvas>` (seek ~1 s in, JPEG), and emits a best-effort **HEVC warning** (Safari can play `hvc1` +
+    a `.mov`/quicktime file → likely HEVC → won't play in Chrome/Firefox). Rejects undecodable files with a
+    clear message.
+  - **`lib/use-video-insert.ts` rewritten:** no `compressVideo` call. Uploads the **original file as-is** to
+    `‹uid›/‹docId›/‹id›.‹ext›` + the poster to `‹id›.jpg`, then swaps in `<video controls poster>`. Poster is
+    optional (insert still succeeds without one). Same `knownVideoPaths` / orphan-sweep seams as before
+    (`data-path` + `data-poster-path` both tracked) so cleanup is unchanged. Added an `onWarn` callback.
+  - **Editor (`document-editor.tsx`):** new transient **notice banner** (under the header) so media
+    validation errors and the HEVC warning say *why* (the old `onError` only flipped the save badge to
+    "Save failed", which was misleading). `showNotice(kind,text)` auto-dismisses after 7 s; video `onError`
+    now surfaces the real message and `onWarn` shows the amber HEVC caveat.
+  - **Trade-off (documented decision):** no compression — a raw phone clip stays large (bounded by the
+    200 MB cap + the 60 s cap); and HEVC clips may be black boxes for non-Safari viewers (warned, not
+    blocked — outright rejecting iPhone uploads felt too hostile). If universal playback ever matters more
+    than the serverless-free simplicity, the proper fix is an off-Vercel transcode service (Mux/Cloudinary),
+    not bringing ffmpeg back into the function.
+  - **Verified:** `tsc --noEmit` clean, `eslint` clean, **`next build` passes** (nothing references the
+    deleted server action). Interactive insert not yet runtime-tested in-app (auth-gated) — but there's no
+    server path left to fail.
 - **Bugfix — first typed line in a new doc had wrong spacing.** A brand-new doc seeded the editor
   with `""`, so the **first line you typed went in as a bare text node** (no `<p>` wrapper); only after
   pressing Enter did the browser start emitting real `<p>` blocks (`defaultParagraphSeparator="p"`).
