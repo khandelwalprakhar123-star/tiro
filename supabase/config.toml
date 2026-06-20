@@ -243,6 +243,12 @@ otp_expiry = 3600
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
 
+# Magic-link / email-OTP template. Self-contained inline-styled HTML (no web fonts —
+# email clients strip <link>/@import; Outlook ghost-table wrapper for the card).
+[auth.email.template.magic_link]
+subject = "Your Tiro sign-in code"
+content_path = "./supabase/templates/magic_link.html"
+
 # Uncomment to customize email template
 # [auth.email.template.invite]
 # subject = "You have been invited"
