@@ -80,14 +80,14 @@ mid-session ban/delete until token expiry (~1 h) — **not done** (left as the a
   (0004), **`doc-audio`** (0005). All **APPLIED** to remote. The shared `‹uid›/‹docId›/` scheme is what
   lets `purgeDocMedia` clean all three at once.
 
-**Git state (2026-06-17):** the app is committed and **auto-deploys to `tiro.works`** (Vercel watches
+**Git state (2026-06-21):** the app is committed and **auto-deploys to `tiro.works`** (Vercel watches
 GitHub `main`; pushes by a GitHub-recognized author build live in ~1–2 min — commits authored as the
-machine hostname get `BLOCKED`, see the rebrand/deploy notes). Latest commit **`76aeceb`** (Backspace-
-delete + undoable media delete); audio feature shipped in `8ee90b2`. A few **local-only stragglers stay
-uncommitted on purpose**: `supabase/config.toml` + `supabase/templates/` (email-template work) and
-`HANDOFF-video.md` (scratch handoff for the parallel video-hardening session). The **video-hardening
-work** lives on branch `feat/video` in worktree `.claude/worktrees/video` (separate session; see
-`HANDOFF-video.md`).
+machine hostname get `BLOCKED`, see the rebrand/deploy notes). Latest commit **`441bbac`** (checklist
+conversion fix + ffmpeg-free video) — **pushed and live on `tiro.works`** (deploy `dpl_CUauW9c7…`,
+state `READY`, author recorded as Prakhar Khandelwal so not blocked). Working tree is **clean** (all
+`HANDOFF-*.md` files were deleted). A stale **`feat/video` worktree** still exists at
+`.claude/worktrees/video` (`6be1640`) but is **obsolete** — the ffmpeg server-transcode approach it held
+was abandoned; video now ships the audio-model rewrite that's on `main`. Safe to remove that worktree.
 
 ---
 
@@ -212,6 +212,21 @@ work** lives on branch `feat/video` in worktree `.claude/worktrees/video` (separ
 ---
 
 ## Changelog
+
+### 2026-06-21
+- **Let Cmd+R reload the page in the editor** instead of right-aligning. In
+  `app/doc/[docId]/document-editor.tsx` (`onEditorKeyDown`), the align-right branch now only fires when
+  Ctrl (not Cmd) is held (`k === "r" && !e.metaKey`); `Cmd+R` falls through to the browser. Everything
+  else is unchanged — alignment is still Cmd-or-Ctrl + L/E, and bold/italic/underline stay on the
+  browser's native Cmd+B/I/U. (Chose this over moving all formatting to Ctrl, which would have shadowed
+  macOS's Ctrl+E/Ctrl+B line-navigation inside the editor.)
+- **Shipped the checklist fix + ffmpeg-free video to production.** Committed the 2026-06-20 work as
+  **`441bbac`** ("Fix checklist conversion + make video ffmpeg-free"), pushed to GitHub `main`, and
+  **verified the live deploy**: Vercel build `dpl_CUauW9c7…` reached state **`READY`** (~44 s build),
+  commit author correctly recorded as **Prakhar Khandelwal** (so not `BLOCKED`), aliases `tiro.works` +
+  `www.tiro.works` point at it, and `https://tiro.works` returns `307` (the normal redirect to login for
+  an unauthenticated request). No code change — release + verification only. All `HANDOFF-*.md` deleted;
+  working tree clean.
 
 ### 2026-06-20
 - **Bugfix — checklist deleted the selected lines instead of converting them.** Selecting several lines

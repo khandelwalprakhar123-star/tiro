@@ -1071,7 +1071,8 @@ export function DocumentEditor({
             ? "justifyCenter"
             : k === "l"
               ? "justifyLeft"
-              : k === "r"
+              : // Cmd+R must stay the browser reload, so only Ctrl+R aligns right.
+                k === "r" && !e.metaKey
                 ? "justifyRight"
                 : null;
         if (cmd) {
