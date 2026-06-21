@@ -1064,20 +1064,38 @@ export function DocumentEditor({
         }
       }
 
-      if ((e.metaKey || e.ctrlKey) && !e.altKey) {
+      // All formatting lives on Ctrl, never Cmd — that keeps Cmd+R/L/E free for
+      // the browser (reload, address bar, …) and keeps one consistent modifier.
+      // Alignment: Ctrl+L/R/E. Inline marks: Ctrl+B/U/I.
+      if (e.ctrlKey && !e.metaKey && !e.altKey) {
         const k = e.key.toLowerCase();
         const cmd =
-          k === "e"
-            ? "justifyCenter"
-            : k === "l"
-              ? "justifyLeft"
-              : // Cmd+R must stay the browser reload, so only Ctrl+R aligns right.
-                k === "r" && !e.metaKey
-                ? "justifyRight"
-                : null;
+          k === "l"
+            ? "justifyLeft"
+            : k === "r"
+              ? "justifyRight"
+              : k === "e"
+                ? "justifyCenter"
+                : k === "b"
+                  ? "bold"
+                  : k === "u"
+                    ? "underline"
+                    : k === "i"
+                      ? "italic"
+                      : null;
         if (cmd) {
           e.preventDefault();
           exec(cmd);
+          return;
+        }
+      }
+
+      // Suppress the browser's native Cmd+B/I/U so inline formatting only
+      // happens via Ctrl; Cmd is reserved for browser shortcuts.
+      if (e.metaKey && !e.ctrlKey && !e.altKey) {
+        const k = e.key.toLowerCase();
+        if (k === "b" || k === "i" || k === "u") {
+          e.preventDefault();
           return;
         }
       }

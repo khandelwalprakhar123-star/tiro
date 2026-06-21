@@ -214,12 +214,13 @@ was abandoned; video now ships the audio-model rewrite that's on `main`. Safe to
 ## Changelog
 
 ### 2026-06-21
-- **Let Cmd+R reload the page in the editor** instead of right-aligning. In
-  `app/doc/[docId]/document-editor.tsx` (`onEditorKeyDown`), the align-right branch now only fires when
-  Ctrl (not Cmd) is held (`k === "r" && !e.metaKey`); `Cmd+R` falls through to the browser. Everything
-  else is unchanged — alignment is still Cmd-or-Ctrl + L/E, and bold/italic/underline stay on the
-  browser's native Cmd+B/I/U. (Chose this over moving all formatting to Ctrl, which would have shadowed
-  macOS's Ctrl+E/Ctrl+B line-navigation inside the editor.)
+- **Moved all editor formatting shortcuts to Ctrl** (one consistent modifier) in
+  `app/doc/[docId]/document-editor.tsx` (`onEditorKeyDown`). Alignment is now **Ctrl+L/R/E**, inline
+  marks are **Ctrl+B/U/I**, and the browser's native **Cmd+B/I/U** are `preventDefault`-ed so they no
+  longer format. This frees every **Cmd** combo for the browser (Cmd+R reload, Cmd+L address bar, …).
+  Trade-off accepted: taking over Ctrl shadows macOS's Ctrl+E/Ctrl+B line-navigation inside the editor.
+  (Supersedes the earlier "only Cmd+R passes through" approach — the mixed Cmd/Ctrl behaviour was
+  confusing.)
 - **Shipped the checklist fix + ffmpeg-free video to production.** Committed the 2026-06-20 work as
   **`441bbac`** ("Fix checklist conversion + make video ffmpeg-free"), pushed to GitHub `main`, and
   **verified the live deploy**: Vercel build `dpl_CUauW9c7…` reached state **`READY`** (~44 s build),
