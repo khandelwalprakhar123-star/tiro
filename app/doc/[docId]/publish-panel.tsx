@@ -1,14 +1,18 @@
 "use client";
 
-// The "Publish to web" control in the editor header. Publishing snapshots the
-// document into `published_pages` (server action) and makes it viewable, with no
-// login, at  <slug>.tiro.works. This panel shows the public link, lets the owner
-// copy/open it, push a fresh snapshot ("Update published version"), or unpublish.
+// The "Publish to web" dialog, opened from the editor's ship (Publish/Export)
+// menu. Publishing snapshots the document into `published_pages` (server action)
+// and makes it viewable, with no login, at  <slug>.tiro.works. The dialog shows
+// the public link and lets the owner copy/open it, push a fresh snapshot
+// ("Update published version"), or unpublish.
 //
-// Sharing model (v1): one mode — anyone with the link can view. There is no
-// per-person access; published = world-readable.
+// It's a CONTROLLED modal: the editor owns `open`/`onClose` and the published
+// `state` (so the toolbar can show a "live" dot); this component just renders and
+// drives the server actions.
+//
+// Sharing model (v1): one mode — anyone with the link can view.
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   publishDocument,
   unpublishDocument,
@@ -27,54 +31,51 @@ function publicUrl(slug: string): string {
   return `https://${slug}.tiro.works`;
 }
 
-export function PublishPanel({
+export function PublishDialog({
   docId,
-  initial,
+  state,
+  setState,
+  open,
+  onClose,
 }: {
   docId: string;
-  initial: PublishState | null;
+  state: PublishState | null;
+  setState: (s: PublishState | null) => void;
+  open: boolean;
+  onClose: () => void;
 }) {
-  const [state, setState] = useState<PublishState | null>(initial);
-  const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState<"publish" | "update" | "unpublish" | null>(
     null,
   );
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const wrapRef = useRef<HTMLDivElement>(null);
 
-  // Close the popover on an outside click.
+  // Close on Escape.
   useEffect(() => {
     if (!open) return;
-    function onDown(e: MouseEvent) {
-      if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
-  }, [open]);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
+  if (!open) return null;
 
   const isLive = !!state;
   const url = state ? publicUrl(state.slug) : "";
 
-  async function doPublish() {
-    setBusy("publish");
+  async function publish(kind: "publish" | "update") {
+    setBusy(kind);
     setError(null);
     try {
       setState(await publishDocument(docId));
     } catch {
-      setError("Couldn’t publish. Please try again.");
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  async function doUpdate() {
-    setBusy("update");
-    setError(null);
-    try {
-      setState(await publishDocument(docId));
-    } catch {
-      setError("Couldn’t update. Please try again.");
+      setError(
+        kind === "publish"
+          ? "Couldn’t publish. Please try again."
+          : "Couldn’t update. Please try again.",
+      );
     } finally {
       setBusy(null);
     }
@@ -104,102 +105,103 @@ export function PublishPanel({
   }
 
   return (
-    <div ref={wrapRef} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className={`inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm transition-colors ${
-          isLive
-            ? "border-yolk/50 bg-yolk/10 text-ink hover:border-yolk"
-            : "border-line text-ink-soft hover:border-ink hover:text-ink"
-        }`}
+    // Backdrop — click outside the card to close.
+    <div
+      className="fixed inset-0 z-40 flex items-center justify-center bg-ink/30 px-6 backdrop-blur-[2px]"
+      onMouseDown={onClose}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        onMouseDown={(e) => e.stopPropagation()}
+        className="relative w-full max-w-md rounded-2xl border border-line bg-paper p-6 shadow-2xl"
       >
-        {isLive && (
-          <span className="h-1.5 w-1.5 rounded-full bg-yolk" aria-hidden />
-        )}
-        {isLive ? "Published" : "Publish"}
-      </button>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close"
+          className="absolute right-4 top-4 text-ink-soft transition-opacity hover:opacity-70"
+        >
+          ✕
+        </button>
 
-      {open && (
-        <div className="absolute right-0 z-30 mt-2 w-80 rounded-2xl border border-line bg-paper p-4 shadow-xl">
-          {!isLive ? (
-            <>
-              <p className="text-sm font-medium text-ink">Publish to web</p>
-              <p className="mt-1 text-sm text-ink-soft">
-                Create a public page anyone can view — no login needed. All your
-                text and embeds (images, video, audio, links) come along.
-              </p>
+        {!isLive ? (
+          <>
+            <h2 className="font-display text-2xl text-ink">Publish to web</h2>
+            <p className="mt-2 text-sm text-ink-soft">
+              Create a public page anyone can view — no login needed. All your
+              text and embeds (images, video, audio, links) come along.
+            </p>
+            <button
+              type="button"
+              onClick={() => publish("publish")}
+              disabled={busy === "publish"}
+              className="mt-5 w-full rounded-full bg-ink px-4 py-2.5 text-sm text-paper transition-opacity hover:opacity-90 disabled:opacity-50"
+            >
+              {busy === "publish" ? "Publishing…" : "Publish to web"}
+            </button>
+          </>
+        ) : (
+          <>
+            <h2 className="font-display text-2xl text-ink">This page is live</h2>
+            <p className="mt-2 text-sm text-ink-soft">
+              Anyone with this link can view it.
+            </p>
+
+            <div className="mt-4 flex items-center gap-2">
+              <input
+                readOnly
+                value={url}
+                onFocus={(e) => e.currentTarget.select()}
+                className="min-w-0 flex-1 rounded-lg border border-line bg-paper px-3 py-2 text-xs text-ink"
+              />
               <button
                 type="button"
-                onClick={doPublish}
-                disabled={busy === "publish"}
-                className="mt-4 w-full rounded-full bg-ink px-4 py-2 text-sm text-paper transition-opacity hover:opacity-90 disabled:opacity-50"
+                onClick={copyLink}
+                className="shrink-0 rounded-lg border border-line px-3 py-2 text-xs text-ink-soft transition-colors hover:border-ink hover:text-ink"
               >
-                {busy === "publish" ? "Publishing…" : "Publish to web"}
+                {copied ? "Copied" : "Copy"}
               </button>
-            </>
-          ) : (
-            <>
-              <p className="text-sm font-medium text-ink">This page is live</p>
-              <p className="mt-1 text-sm text-ink-soft">
-                Anyone with this link can view it.
-              </p>
+            </div>
 
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 inline-block text-xs text-ink-soft underline-offset-2 hover:text-ink hover:underline"
+            >
+              Open in a new tab ↗
+            </a>
+
+            <div className="mt-5 border-t border-line pt-4">
+              <p className="text-xs text-ink-soft">
+                The public page is a snapshot. Push your latest edits when you’re
+                ready.
+              </p>
               <div className="mt-3 flex items-center gap-2">
-                <input
-                  readOnly
-                  value={url}
-                  onFocus={(e) => e.currentTarget.select()}
-                  className="min-w-0 flex-1 rounded-lg border border-line bg-paper px-3 py-1.5 text-xs text-ink"
-                />
                 <button
                   type="button"
-                  onClick={copyLink}
-                  className="shrink-0 rounded-lg border border-line px-3 py-1.5 text-xs text-ink-soft transition-colors hover:border-ink hover:text-ink"
+                  onClick={() => publish("update")}
+                  disabled={busy !== null}
+                  className="flex-1 rounded-full bg-ink px-4 py-2 text-sm text-paper transition-opacity hover:opacity-90 disabled:opacity-50"
                 >
-                  {copied ? "Copied" : "Copy"}
+                  {busy === "update" ? "Updating…" : "Update published version"}
+                </button>
+                <button
+                  type="button"
+                  onClick={doUnpublish}
+                  disabled={busy !== null}
+                  className="rounded-full border border-line px-4 py-2 text-sm text-ink-soft transition-colors hover:border-red-300 hover:text-red-700 disabled:opacity-50"
+                >
+                  {busy === "unpublish" ? "…" : "Unpublish"}
                 </button>
               </div>
+            </div>
+          </>
+        )}
 
-              <a
-                href={url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-2 inline-block text-xs text-ink-soft underline-offset-2 hover:text-ink hover:underline"
-              >
-                Open in a new tab ↗
-              </a>
-
-              <div className="mt-4 border-t border-line pt-3">
-                <p className="text-xs text-ink-soft">
-                  The public page is a snapshot. Push your latest edits when
-                  you’re ready.
-                </p>
-                <div className="mt-3 flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={doUpdate}
-                    disabled={busy !== null}
-                    className="flex-1 rounded-full bg-ink px-4 py-2 text-sm text-paper transition-opacity hover:opacity-90 disabled:opacity-50"
-                  >
-                    {busy === "update" ? "Updating…" : "Update published version"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={doUnpublish}
-                    disabled={busy !== null}
-                    className="rounded-full border border-line px-4 py-2 text-sm text-ink-soft transition-colors hover:border-red-300 hover:text-red-700 disabled:opacity-50"
-                  >
-                    {busy === "unpublish" ? "…" : "Unpublish"}
-                  </button>
-                </div>
-              </div>
-            </>
-          )}
-
-          {error && <p className="mt-3 text-xs text-red-700">{error}</p>}
-        </div>
-      )}
+        {error && <p className="mt-4 text-xs text-red-700">{error}</p>}
+      </div>
     </div>
   );
 }

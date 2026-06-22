@@ -325,6 +325,55 @@ export function ExportIcon({ className }: { className?: string }) {
   );
 }
 
+// A sailing ship setting off to the right — its single sail billows rightward
+// (catching wind from the left), riding a short waterline. Used as the trigger
+// for the Publish / Export dropdown ("set your document out into the world").
+export function ShipIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden
+      className={className}
+    >
+      {/* mast */}
+      <path
+        d="M12 3.2V15"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+      {/* sail — billowing toward the right */}
+      <path
+        d="M12 4c4.2 1.5 5.7 5.6 3.9 8.7H12Z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+      {/* hull */}
+      <path
+        d="M4 15.4h16c-1 3-3.5 4.7-6.7 4.7h-2.6C7.5 20.1 5 18.4 4 15.4Z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+      {/* waterline */}
+      <path
+        d="M3 21c1.1.7 2.2.7 3.3 0s2.2-.7 3.3 0 2.2.7 3.4 0 2.2-.7 3.3 0 2.2.7 3.4 0"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        opacity="0.55"
+      />
+    </svg>
+  );
+}
+
 export function FolderIcon() {
   return (
     <svg

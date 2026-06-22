@@ -217,6 +217,18 @@ was abandoned; video now ships the audio-model rewrite that's on `main`. Safe to
 ## Changelog
 
 ### 2026-06-22
+- **Publish moved into a toolbar "ship" dropdown (with Export to PDF).** Replaced the header Publish button
+  *and* the standalone end-of-toolbar Export button with ONE `ToolbarMenu` at the toolbar's end: a new
+  **`ShipIcon`** (a sailboat with its sail billowing rightward on a short waterline — "set the doc out into
+  the world") opens a dropdown with two items — **Publish to web** (→ opens the publish dialog) and
+  **Export to PDF**. A small yolk dot sits on the ship when the doc is currently published.
+  - `PublishPanel` (header popover) → refactored into a **controlled `PublishDialog`** (centered modal,
+    backdrop/Escape to close) in `app/doc/[docId]/publish-panel.tsx`. The editor now owns the publish `state`
+    (`useState(initialPublish)`) + an `open` flag and passes them down, so the toolbar can show the live dot.
+    Same publish/copy/open/update/unpublish actions as before.
+  - `components/icons.tsx`: added `ShipIcon` (stroke-only, 24×24, matches the set). Old `ExportIcon` left
+    defined but unused. Verified the ship renders cleanly at 24px via a screenshot harness.
+  - `tsc` + `eslint` clean, `next build` passes. (Not yet committed/pushed.)
 - **Bugfix — audio playback surfaced a scary "Runtime NotSupportedError" overlay + swallowed insert errors.**
   Audio's first real runtime test (it was previously gate-only). Two fixes in `document-editor.tsx` +
   `app/p/[slug]/published-document.tsx`:
@@ -274,12 +286,17 @@ was abandoned; video now ships the audio-model rewrite that's on `main`. Safe to
     dynamic route; proxy compiles). **Not yet runtime-tested** — requires (1) migration 0006 applied, and
     (2) wildcard DNS+domain (below). Until the wildcard domain exists, a published doc is still viewable at
     the path form `tiro.works/p/<slug>` (the subdomain just won't resolve yet).
-  - **⚠️ User dashboard steps still required for subdomains to resolve:**
-    1. **GoDaddy DNS:** add `CNAME  *  →  cname.vercel-dns.com.` (wildcard for `*.tiro.works`).
-    2. **Vercel:** add domain **`*.tiro.works`** to the project (Settings → Domains). Wildcard SSL is issued
-       automatically once DNS verifies. (Apex `tiro.works` + `www` stay as they are.)
-    Caveat: Vercel wildcard certs sometimes require the domain to verify via DNS challenge — follow whatever
-    Vercel's domain UI prompts. Path form (`/p/<slug>`) works immediately with no DNS change.
+  - **✅ Wildcard subdomains LIVE (2026-06-22).** Verified `https://scarlet-river-3638.tiro.works/` →
+    HTTP 200, valid SSL, serves the published doc (title "Features · Tiro"), no login redirect; apex
+    `tiro.works` still resolves (main site intact). What it took:
+    1. Added domain **`*.tiro.works`** to the Vercel project. Vercel flagged it "Invalid Configuration"
+       because **wildcard SSL requires Vercel to control DNS** (no CNAME-only path for wildcards — Let's
+       Encrypt wildcard certs need the DNS-01 challenge, which Vercel can only do via its own nameservers).
+    2. **Moved `tiro.works` nameservers GoDaddy → Vercel** (`ns1.vercel-dns.com` / `ns2.vercel-dns.com`).
+       DNS for the domain is now managed by Vercel (it auto-recreated apex + `www`). After propagation the
+       wildcard went Valid and SSL issued automatically.
+    NOTE for future DNS changes: records now live in **Vercel DNS**, not GoDaddy (GoDaddy still holds the
+    registration). No custom email/MX on the domain, so nothing was lost in the move.
 
 ### 2026-06-21
 - **Moved all editor formatting shortcuts to Ctrl** (one consistent modifier) in

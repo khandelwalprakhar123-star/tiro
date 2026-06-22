@@ -11,7 +11,7 @@ import { useVideoInsert, VIDEO_BUCKET, VIDEO_ACCEPT } from "@/lib/use-video-inse
 import { useAudioInsert, AUDIO_BUCKET, AUDIO_ACCEPT } from "@/lib/use-audio-insert";
 import { useLinkPreview } from "@/lib/use-link-preview";
 import { exportDocumentToPdf } from "@/lib/export-pdf";
-import { PublishPanel } from "./publish-panel";
+import { PublishDialog } from "./publish-panel";
 import type { PublishState } from "@/lib/publish-actions";
 import {
   FONTS,
@@ -24,7 +24,7 @@ import {
 import {
   AudioFrameIcon,
   ChecklistIcon,
-  ExportIcon,
+  ShipIcon,
   ImageFrameIcon,
   ListIcon,
   PlusIcon,
@@ -214,6 +214,12 @@ export function DocumentEditor({
   const [deleting, setDeleting] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [exporting, setExporting] = useState(false);
+  // Publish-to-Web: current published page for this doc (drives the "live" dot
+  // on the toolbar ship menu) + whether the publish dialog is open.
+  const [publishState, setPublishState] = useState<PublishState | null>(
+    initialPublish,
+  );
+  const [publishOpen, setPublishOpen] = useState(false);
   const [active, setActive] = useState<ActiveMarks>(EMPTY_ACTIVE);
   const [selectedFigure, setSelectedFigure] = useState<HTMLElement | null>(null);
   const [selectedVideo, setSelectedVideo] = useState<HTMLElement | null>(null);
@@ -607,7 +613,7 @@ export function DocumentEditor({
       setSelectedFigure(target.closest("figure[data-img]") as HTMLElement | null);
       setSelectedVideo(target.closest("figure[data-video]") as HTMLElement | null);
     },
-    [scheduleSave, handlePreviewClick],
+    [scheduleSave, handlePreviewClick, showNotice],
   );
 
   // Outside mousedown clears the selection — unless it lands on the floating
@@ -1181,7 +1187,6 @@ export function DocumentEditor({
                 <span className="text-red-700">Save failed</span>
               )}
             </span>
-            <PublishPanel docId={docId} initial={initialPublish} />
             <button
               type="button"
               onClick={handleDelete}
@@ -1518,20 +1523,43 @@ export function DocumentEditor({
 
           <span className="mx-1 h-6 w-px bg-line" />
 
-          {/* Export to PDF — opens the rendered document in a new browser tab
-              (the user downloads it from there if they want; we never force a
-              download). Lights up while the PDF is being generated. */}
-          <button
-            type="button"
-            title="Export to PDF — opens in a new tab"
-            aria-label="Export to PDF"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={handleExportPdf}
-            disabled={exporting}
-            className={btn(exporting)}
+          {/* Share menu — set the document out into the world. A ship icon opens
+              a dropdown: Publish (a public <slug>.tiro.works page) or Export to
+              PDF (opens the rendered doc in a new tab). A yolk dot marks the ship
+              when the doc is currently published. */}
+          <ToolbarMenu
+            title="Publish or export"
+            active={!!publishState || exporting}
+            trigger={
+              <span className="relative inline-flex">
+                <ShipIcon className="h-6 w-6" />
+                {publishState && (
+                  <span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-yolk ring-2 ring-paper" />
+                )}
+              </span>
+            }
           >
-            <ExportIcon className="h-6 w-6" />
-          </button>
+            {(close) => (
+              <>
+                <MenuItem
+                  onClick={() => {
+                    close();
+                    setPublishOpen(true);
+                  }}
+                >
+                  {publishState ? "Published — manage…" : "Publish to web"}
+                </MenuItem>
+                <MenuItem
+                  onClick={() => {
+                    close();
+                    handleExportPdf();
+                  }}
+                >
+                  Export to PDF
+                </MenuItem>
+              </>
+            )}
+          </ToolbarMenu>
         </div>
 
         {/* Body — contenteditable rich text */}
@@ -1577,6 +1605,15 @@ export function DocumentEditor({
             onClose={() => setSelectedVideo(null)}
           />
         )}
+
+        {/* Publish-to-Web dialog (opened from the ship menu). */}
+        <PublishDialog
+          docId={docId}
+          state={publishState}
+          setState={setPublishState}
+          open={publishOpen}
+          onClose={() => setPublishOpen(false)}
+        />
       </div>
     </main>
   );
