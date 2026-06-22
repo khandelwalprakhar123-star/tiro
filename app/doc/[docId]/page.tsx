@@ -26,6 +26,17 @@ export default async function DocumentPage({
   // No such doc (or not ours / trashed) → back to the desk.
   if (!doc) redirect("/workspace");
 
+  // Is this doc already published? Load its public page row (if any) so the
+  // editor's Publish panel opens in the right state (slug, "live" badge).
+  const { data: published } = await supabase
+    .from("published_pages")
+    .select("slug, published_at")
+    .eq("document_id", doc.id)
+    .maybeSingle();
+  const initialPublish = published
+    ? { slug: published.slug, publishedAt: published.published_at as string }
+    : null;
+
   // content is jsonb. v2 stores { html }. Older docs stored { plain } — convert
   // those to simple paragraphs so nothing is lost when the editor upgraded.
   const content = doc.content as { html?: unknown; plain?: unknown } | null;
@@ -48,6 +59,7 @@ export default async function DocumentPage({
       userId={String(data.claims.sub)}
       initialTitle={doc.title}
       initialHtml={initialHtml}
+      initialPublish={initialPublish}
     />
   );
 }

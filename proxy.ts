@@ -5,7 +5,34 @@ import { NextResponse, type NextRequest } from "next/server";
 // Everything else requires a session.
 const PUBLIC_ROUTES = ["/", "/login", "/signup", "/auth", "/p"];
 
+// If the request is for a published-document subdomain (e.g.
+// `quiet-river-4821.tiro.works`, or `…​.localhost` in dev), return the slug.
+// `www` and the bare apex are NOT subdomains. Anything else under `tiro.works`
+// is treated as a published slug → served by the /p/[slug] route.
+function publishedSlug(hostname: string): string | null {
+  const prod = /^([a-z0-9-]+)\.tiro\.works$/.exec(hostname);
+  if (prod && prod[1] !== "www") return prod[1];
+  // Dev convenience: browsers resolve *.localhost to 127.0.0.1, so
+  // `quiet-river-4821.localhost:3000` lets us test subdomains locally.
+  const dev = /^([a-z0-9-]+)\.localhost$/.exec(hostname);
+  if (dev) return dev[1];
+  return null;
+}
+
 export async function proxy(request: NextRequest) {
+  // Subdomain → published page. Rewrite to /p/<slug> and skip the auth gate
+  // entirely (published pages are public; no session needed). The browser URL
+  // stays the subdomain; Next renders the /p/[slug] route. Asset requests
+  // (/_next/static, images) are excluded by the matcher below, so they never
+  // hit this rewrite and load normally on the subdomain host.
+  const hostname = (request.headers.get("host") ?? "").split(":")[0].toLowerCase();
+  const slug = publishedSlug(hostname);
+  if (slug) {
+    const url = request.nextUrl.clone();
+    url.pathname = `/p/${slug}`;
+    return NextResponse.rewrite(url);
+  }
+
   // Start with a response we can attach refreshed cookies to.
   let response = NextResponse.next({ request });
 

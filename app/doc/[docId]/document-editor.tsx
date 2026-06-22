@@ -11,6 +11,8 @@ import { useVideoInsert, VIDEO_BUCKET, VIDEO_ACCEPT } from "@/lib/use-video-inse
 import { useAudioInsert, AUDIO_BUCKET, AUDIO_ACCEPT } from "@/lib/use-audio-insert";
 import { useLinkPreview } from "@/lib/use-link-preview";
 import { exportDocumentToPdf } from "@/lib/export-pdf";
+import { PublishPanel } from "./publish-panel";
+import type { PublishState } from "@/lib/publish-actions";
 import {
   FONTS,
   applyFontFamily,
@@ -37,6 +39,7 @@ type Props = {
   userId: string; // owner uid — first path segment of every uploaded image
   initialTitle: string;
   initialHtml: string;
+  initialPublish: PublishState | null; // existing published page for this doc, if any
 };
 
 // Collect the storage paths of every media item currently in the editor DOM,
@@ -176,6 +179,7 @@ export function DocumentEditor({
   userId,
   initialTitle,
   initialHtml,
+  initialPublish,
 }: Props) {
   const router = useRouter();
   const supabase = createClient();
@@ -531,7 +535,11 @@ export function DocumentEditor({
     insertNodeAtCaret,
     scheduleSave,
     knownAudioPaths,
-    onError: () => setSave("error"),
+    onError: (err) =>
+      showNotice(
+        "error",
+        err instanceof Error ? err.message : "Couldn't add that audio.",
+      ),
   });
   const { tryInsertLinkPreview, handlePreviewClick } = useLinkPreview({
     insertNodeAtCaret,
@@ -560,8 +568,20 @@ export function DocumentEditor({
         const audioEl = audioFig.querySelector("audio");
         if (audioEl) {
           if (target.closest("[data-audio-play]")) {
-            if (audioEl.paused) void audioEl.play();
-            else audioEl.pause();
+            if (audioEl.paused) {
+              // play() rejects if the source can't be loaded/decoded (e.g. a
+              // wrong content-type or a missing file). Catch it so it doesn't
+              // surface as an unhandled "NotSupportedError" runtime overlay, and
+              // tell the user what went wrong instead of failing silently.
+              audioEl.play().catch((err) => {
+                showNotice(
+                  "error",
+                  err instanceof Error && err.name === "NotSupportedError"
+                    ? "This audio can’t be played — its file may be missing or in an unsupported format."
+                    : "Couldn’t play this audio.",
+                );
+              });
+            } else audioEl.pause();
           } else {
             const wave = target.closest<HTMLElement>("[data-waveform]");
             if (wave && isFinite(audioEl.duration)) {
@@ -1161,6 +1181,7 @@ export function DocumentEditor({
                 <span className="text-red-700">Save failed</span>
               )}
             </span>
+            <PublishPanel docId={docId} initial={initialPublish} />
             <button
               type="button"
               onClick={handleDelete}

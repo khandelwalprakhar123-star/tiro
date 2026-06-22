@@ -46,6 +46,7 @@ We add rows/details here as we adopt them. Nothing is locked beyond what we've a
 | Folders / organise (many-to-many) | 🔨 In progress | §7 |
 | Trash — restore / permanent delete | ✅ Done | §8 |
 | Audio embeds + custom player (real waveform) | ✅ Done (volume deferred; runtime test pending) | §9 |
+| Publish to web (`<slug>.tiro.works`, public, no login) | ✅ Done (needs migration applied + wildcard DNS) | §11 |
 
 Legend: 🔨 in progress · ✅ done · 🧊 planned · ❌ dropped
 
@@ -229,3 +230,42 @@ GainNode — deferred. **Runtime test pending** (auth-gated).
 
 - Email OTP = **6-digit code** flow (not magic link). Confirm if you'd prefer the clickable magic link instead.
 - Exact shade of the "Egg-Yolk" accent and other product details are deferred until we reach those features.
+
+---
+
+## 11. Publish to web ✅
+
+**Goal:** let a logged-in user publish a document to a public web page that **anyone can view without
+logging in**, at a **`<slug>.tiro.works`** subdomain. All embeds (text, images, URL/link cards, audio,
+video) work fully on the public page. One sharing mode only (this slice): **anyone with the link can view.**
+
+**Decisions (with user)**
+- **Snapshot, not live.** Publishing copies the document's current title + HTML into a public snapshot. The
+  public page does **not** change as you keep editing — you click **Update published version** to push the
+  latest. (Lets you keep editing privately and release when ready.) **Unpublish** removes the page.
+- **Auto-generated readable slug** (`quiet-river-4821.tiro.works`) for v1. User-chosen custom subdomains are
+  a deferred follow-up (the slug is the table's primary key, so a rename is a future, additive change).
+
+**How it works**
+- A new public table **`published_pages`** (`slug` PK, `document_id`, `owner_id`, snapshot `title` + `content`)
+  is the *only* thing anonymous visitors can read. RLS: **public SELECT**; owner-only writes. The private
+  `documents` table is never exposed to anon. Media already lives in public-read buckets, so embeds load for
+  anyone with no extra policy. Migration `supabase/migrations/0006_create_published_pages.sql`.
+- **Subdomain → page:** `proxy.ts` rewrites `<slug>.tiro.works` (and `<slug>.localhost` in dev) to the public
+  `/p/[slug]` route, bypassing the auth gate. The page is also reachable directly at `tiro.works/p/<slug>`.
+- The published HTML is **sanitized at publish** (`<script>`/`on*=`/`javascript:` stripped) before it's served
+  to the public via `dangerouslySetInnerHTML`. The public renderer re-creates only embed interactivity
+  (audio player, link-card open/play) — no editing, toolbar, or saving.
+- **Editor control:** a **Publish** popover in the editor header (publish / copy link / open / update / unpublish),
+  with a yolk "Published" badge when the doc is live.
+
+**Acceptance criteria**
+- AC1: Publishing a doc returns a `<slug>.tiro.works` link that opens the document for a logged-out visitor.
+- AC2: All embeds (text, images, link cards, audio, video) render and play on the public page.
+- AC3: Editing the doc does not change the public page until **Update published version** is clicked.
+- AC4: **Unpublish** makes the public page 404.
+- AC5: An anonymous visitor can never reach an *unpublished* document.
+
+**Status:** ✅ Code + migration written; `tsc`/`eslint`/`next build` clean. **To go fully live:** apply
+migration 0006 to remote, and add wildcard DNS (`*.tiro.works`) + the `*.tiro.works` domain in Vercel. Until
+the wildcard domain resolves, published docs are viewable at the path form `tiro.works/p/<slug>`.

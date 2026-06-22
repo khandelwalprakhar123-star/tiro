@@ -153,7 +153,9 @@ was abandoned; video now ships the audio-model rewrite that's on `main`. Safe to
 
 **Database** — migrations `0001_create_documents.sql`, `0002_create_folders.sql`,
 `0003_create_doc_images_bucket.sql`, `0004_create_doc_videos_bucket.sql`,
-`0005_create_doc_audio_bucket.sql` (all applied to remote).
+`0005_create_doc_audio_bucket.sql` (all applied to remote),
+`0006_create_published_pages.sql` (Publish-to-Web — **APPLIED to remote 2026-06-22**: table + 7 cols
++ 4 RLS policies verified).
 
 ---
 
@@ -206,12 +208,78 @@ was abandoned; video now ships the audio-model rewrite that's on `main`. Safe to
 - [ ] **Responsive polish (deeper):** tablet (768px) grid tuning, editor sticky-toolbar while typing on
       mobile, and confirm folder/trash hardening with a genuinely long folder name (only pattern-verified).
 - [ ] **Next doc slices:** headers/footers · **export/publish** — **PDF export DONE** (client jsPDF, opens
-      in a new tab; on branch `feat/export-pdf`, awaiting review/merge); Markdown + Publish-to-Web `/p/[slug]`
-      still pending.
+      in a new tab; on branch `feat/export-pdf`, awaiting review/merge); **Publish-to-Web DONE** (code +
+      migration 0006 written; `<slug>.tiro.works` public pages — needs migration applied + wildcard DNS/Vercel
+      domain to fully resolve, see 2026-06-22 changelog); Markdown export still pending.
 
 ---
 
 ## Changelog
+
+### 2026-06-22
+- **Bugfix — audio playback surfaced a scary "Runtime NotSupportedError" overlay + swallowed insert errors.**
+  Audio's first real runtime test (it was previously gate-only). Two fixes in `document-editor.tsx` +
+  `app/p/[slug]/published-document.tsx`:
+  - **Unhandled `play()` rejection.** The play button did `void audioEl.play()`; when a source can't be
+    loaded/decoded, `play()` **rejects** with `NotSupportedError: The element has no supported sources`, and
+    because it was unhandled it surfaced as Next's red runtime overlay. Now wrapped in `.catch()` — the editor
+    shows a friendly dismissible notice ("This audio can't be played — its file may be missing or in an
+    unsupported format."), the public page swallows it silently.
+  - **Audio insert errors were hidden.** `useAudioInsert`'s `onError` was `() => setSave("error")` (just the
+    misleading "Save failed" badge, real message lost to the console) — the same anti-pattern already fixed
+    for video. Now routes through `showNotice("error", err.message)` like video, so decode/upload failures say
+    *why*. (User confirmed audio working after these.) `tsc` clean.
+- **Publish-to-Web — published documents are public at `<slug>.tiro.works`** (no login to view). One
+  sharing mode: anyone with the link can view. Built end-to-end; **migration 0006 APPLIED to remote
+  (2026-06-22)**; **wildcard DNS / Vercel domain not yet configured** (the remaining user dashboard step — see below).
+  - **Model — snapshot, not live.** Publishing copies the doc's current title + content HTML into a new
+    public table `public.published_pages` (keyed by a readable `slug`). Editing the doc does **not** change
+    the public page until the owner clicks **Update published version** (re-publish overwrites the snapshot,
+    keeps the same slug). **Unpublish** deletes the row → the subdomain 404s. Decision (with user): snapshot
+    over live, and **auto-generated readable slug** now (`quiet-river-4821`), custom subdomains deferred.
+  - **Why a separate table** (not an anon RLS policy on `documents`): the private `documents` table stays
+    fully owner-only — never widened to `anon`. `published_pages` is the *only* anon-readable surface and is
+    a minimal projection (slug/title/content snapshot). Media already lives in public-read buckets, so embeds
+    (image/video/audio/link-card) just work for logged-out visitors with no extra policy.
+  - **Migration `supabase/migrations/0006_create_published_pages.sql`** (written, **NOT yet applied**):
+    `published_pages` (slug PK, document_id unique FK→documents ON DELETE CASCADE, owner_id, title, content
+    jsonb snapshot, timestamps). RLS: **public SELECT `using (true)`** (the point — anyone can read a
+    published page); INSERT/UPDATE/DELETE owner-only (`owner_id = auth.uid()`, insert also `EXISTS` the
+    document is theirs). Apply via `supabase db query --linked -f supabase/migrations/0006_create_published_pages.sql`
+    or paste into the dashboard SQL editor. Safe to re-run.
+  - **Subdomain routing in `proxy.ts`:** new `publishedSlug(hostname)` matches `<slug>.tiro.works` (and
+    `<slug>.localhost` for dev), excluding `www`/apex. On a match the proxy **rewrites to `/p/<slug>`** and
+    returns immediately — skipping the auth gate (published pages are public, no `getUser()` needed). Browser
+    URL stays the subdomain. Apex/`www`/`*.vercel.app` are unaffected. Asset requests (`/_next/static`, images)
+    are already excluded by the matcher, so they load normally on the subdomain host.
+  - **Public route `app/p/[slug]/`** (already public in `PUBLIC_ROUTES`): `page.tsx` (server) reads
+    `published_pages` by slug via the anon server client (RLS allows), `notFound()` → friendly `not-found.tsx`
+    if missing/unpublished; `generateMetadata` sets title + a tag-stripped excerpt for link previews.
+    `published-document.tsx` (client) renders the snapshot HTML read-only inside `.doc-content` and
+    **re-creates only embed interactivity** — the custom audio player (capture-phase listeners + click
+    play/seek, same logic as the editor) and link-card open/play. No toolbar, no editing, no saving.
+    Reachable two ways: `<slug>.tiro.works` (via rewrite) **and** `tiro.works/p/<slug>` (direct).
+  - **Sanitization at publish:** `sanitizeHtml` in `lib/publish-actions.ts` strips `<script>`, inline
+    `on*=` handlers, and `javascript:` URLs before the snapshot is stored (the HTML now renders to the public
+    via `dangerouslySetInnerHTML`). Belt-and-suspenders — editor paste is already plain-text-stripped. Noted
+    limitation: regex strip, not a full parser; swap for DOMPurify if untrusted HTML is ever ingested elsewhere.
+  - **Editor integration:** new `lib/publish-actions.ts` (`publishDocument` upsert-by-document_id keeping the
+    slug on re-publish, `unpublishDocument`, slug generation w/ DB uniqueness check). New
+    `app/doc/[docId]/publish-panel.tsx` — a **Publish** popover in the editor header (next to Delete): publish,
+    copy link, open, update, unpublish; shows a yolk "Published" badge when live. `document-editor.tsx` gained
+    an `initialPublish` prop; `app/doc/[docId]/page.tsx` loads the doc's `published_pages` row and passes it so
+    the panel opens in the right state. The public URL is built from `window.location` (prod → `<slug>.tiro.works`,
+    dev → `<slug>.localhost:<port>`).
+  - **Verified:** `tsc --noEmit` clean, `eslint` clean, **`next build` passes** (`/p/[slug]` registered as a
+    dynamic route; proxy compiles). **Not yet runtime-tested** — requires (1) migration 0006 applied, and
+    (2) wildcard DNS+domain (below). Until the wildcard domain exists, a published doc is still viewable at
+    the path form `tiro.works/p/<slug>` (the subdomain just won't resolve yet).
+  - **⚠️ User dashboard steps still required for subdomains to resolve:**
+    1. **GoDaddy DNS:** add `CNAME  *  →  cname.vercel-dns.com.` (wildcard for `*.tiro.works`).
+    2. **Vercel:** add domain **`*.tiro.works`** to the project (Settings → Domains). Wildcard SSL is issued
+       automatically once DNS verifies. (Apex `tiro.works` + `www` stay as they are.)
+    Caveat: Vercel wildcard certs sometimes require the domain to verify via DNS challenge — follow whatever
+    Vercel's domain UI prompts. Path form (`/p/<slug>`) works immediately with no DNS change.
 
 ### 2026-06-21
 - **Moved all editor formatting shortcuts to Ctrl** (one consistent modifier) in
