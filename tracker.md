@@ -89,6 +89,12 @@ state `READY`, author recorded as Prakhar Khandelwal so not blocked). Working tr
 `.claude/worktrees/video` (`6be1640`) but is **obsolete** — the ffmpeg server-transcode approach it held
 was abandoned; video now ships the audio-model rewrite that's on `main`. Safe to remove that worktree.
 
+**Marketing site:** `/` now serves a brand **landing page** to logged-out visitors (signed-in users still
+redirect to `/workspace`). Lives in `components/landing/*`; preserves the paper/ink/yolk + Fraunces/Hanken
+identity, signature "scribble → text" SVG motif, drenched-ink Publish band, and reuses the editor's
+`.doc-content` CSS for true-to-life mockups. Root `PRODUCT.md` holds the impeccable design context.
+See the 2026-06-22 changelog entry. **Not yet committed.**
+
 ---
 
 ## File inventory (full)
@@ -217,6 +223,27 @@ was abandoned; video now ships the audio-model rewrite that's on `main`. Safe to
 ## Changelog
 
 ### 2026-06-22
+- **Marketing landing page at `/` (logged-out).** Built Tiro's first real landing page via the `impeccable`
+  design skill (register: brand). `app/page.tsx` now: signed-in → redirect `/workspace` (unchanged), else
+  renders the new `<Landing/>`. Components live in **`components/landing/`** (`landing.tsx` composes them):
+  `site-nav` (sticky, gains a border/blur on scroll), `hero`, `editor-mock`, `media-showcase`, `publish-band`,
+  `audience-tabs`, `closing-cta`, `site-footer`, plus `reveal-manager` (scroll-reveal).
+  - **Signature motif — scribble → text.** A hand-drawn SVG scribble draws on (CSS `stroke-dashoffset`,
+    `pathLength=1`), a caret rides it, clean Fraunces type resolves in its wake. Anchors the hero, recurs as a
+    deferred re-draw at the closing CTA. Ties to Tiro = Cicero's shorthand-inventing scribe. User-chosen
+    direction; inspired structurally by wisprflow.ai's before/after hero.
+  - **Identity preserved** (committed brand, per skill): paper/ink/egg-yolk + Fraunces/Hanken + grain. Pushed
+    bolder than `/login` with a full-bleed **drenched-ink Publish band** and oversized type.
+  - **Real product proof, not adjectives.** The "It all lives on one page" section + Media section reuse the
+    editor's own `.doc-content` CSS verbatim (real audio waveform player, link-card unfurl, image figures), so
+    mocks match the real editor. Three **verified** Unsplash images (HTTP 200-checked). The Publish band's
+    browser mock continues the same "Iceland, day three" doc, now live at `leona.tiro.works`.
+  - New CSS in `app/globals.css` (clearly-commented "LANDING PAGE" block): scribble/ink-in/swash/caret
+    keyframes, a `reveal-armed` scroll-reveal system (content visible by default; only JS arms the hidden
+    start state — no-JS/headless/reduced-motion all render visible), `.browser-mock`, `.link-underline`.
+    Full `prefers-reduced-motion` fallbacks land every animation on its finished state.
+  - Verified in-browser (Playwright) at 390 / 820 / 1440px; tab switching works; no console errors.
+    `next build` + `tsc` pass. Also wrote root **`PRODUCT.md`** (impeccable project context). Not yet committed.
 - **Publish moved into a toolbar "ship" dropdown (with Export to PDF).** Replaced the header Publish button
   *and* the standalone end-of-toolbar Export button with ONE `ToolbarMenu` at the toolbar's end: a new
   **`ShipIcon`** (a sailboat with its sail billowing rightward on a short waterline — "set the doc out into

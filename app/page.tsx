@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { Landing } from "@/components/landing/landing";
 
 export default async function Home() {
   const supabase = await createClient();
@@ -7,5 +8,9 @@ export default async function Home() {
   // network round-trip. The proxy already did the authoritative getUser().
   const { data } = await supabase.auth.getClaims();
 
-  redirect(data?.claims ? "/workspace" : "/login");
+  // Signed-in users go straight to their desk; everyone else meets the
+  // marketing landing page.
+  if (data?.claims) redirect("/workspace");
+
+  return <Landing />;
 }
