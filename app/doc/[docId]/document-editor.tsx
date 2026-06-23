@@ -1650,6 +1650,10 @@ export function DocumentEditor({
           Temporary chrome; removed (or promoted to a real setting) once we decide. */}
       <button
         type="button"
+        // Keep focus (and the caret) in the editor when toggling — without this
+        // the button steals focus, the editor blurs, and the caret vanishes
+        // until you click back in.
+        onMouseDown={(e) => e.preventDefault()}
         onClick={() => setSmoothCaret((v) => !v)}
         aria-pressed={smoothCaret}
         title="Prototype: smooth gliding caret"
