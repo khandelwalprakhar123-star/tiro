@@ -250,7 +250,7 @@ export function ShorthandBand() {
                 className="font-display text-lg text-ink"
                 style={{ fontVariationSettings: "'opsz' 60, 'SOFT' 30, 'WONK' 1" }}
               >
-                Every Marco shorthand
+                Marco shorthands
               </span>
             </div>
             <span className="text-xs text-ink-soft">
