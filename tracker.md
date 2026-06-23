@@ -222,6 +222,21 @@ See the 2026-06-22 changelog entry. **Not yet committed.**
 
 ## Changelog
 
+### 2026-06-23
+- **Export to Markdown.** New `lib/export-markdown.ts` exports the document as a `.md` file. Modeled on
+  `lib/export-pdf.ts`: clones the editor, strips runtime-only chrome (drag handles, `.is-selected`,
+  still-loading media), then walks the DOM emitting Markdown instead of jsPDF primitives — so no
+  layout/pagination math. Hand-written walker (no `turndown` dep) because it must understand the editor's
+  custom nodes (figure `data-img`/`data-video`/`data-audio`/`data-link-card`, checklists via `data-checked`).
+  Media degrades gracefully: image → `![caption](src)`, video/audio → link or italic placeholder, link-card →
+  `[title](url)`. **Downloads** a file (vs PDF's new-tab) since Markdown isn't viewable and downloads dodge the
+  popup blocker. Wired into `document-editor.tsx`: `handleExportMarkdown` callback + a third `MenuItem`
+  ("Export to Markdown") in the ship dropdown, beside Export to PDF.
+- **Simplified the ship/export logo.** `ShipIcon` (`components/icons.tsx`) reduced from 4 paths to 2 (mast +
+  triangular sail, hull) — dropped the curved billowing sail and the 5-bump wavy waterline that read as noise
+  at toolbar size.
+- Branch: `feature/export-markdown`.
+
 ### 2026-06-22
 - **Marketing landing page at `/` (logged-out).** Built Tiro's first real landing page via the `impeccable`
   design skill (register: brand). `app/page.tsx` now: signed-in → redirect `/workspace` (unchanged), else

@@ -11,6 +11,7 @@ import { useVideoInsert, VIDEO_BUCKET, VIDEO_ACCEPT } from "@/lib/use-video-inse
 import { useAudioInsert, AUDIO_BUCKET, AUDIO_ACCEPT } from "@/lib/use-audio-insert";
 import { useLinkPreview } from "@/lib/use-link-preview";
 import { exportDocumentToPdf } from "@/lib/export-pdf";
+import { exportDocumentToMarkdown } from "@/lib/export-markdown";
 import { PublishDialog } from "./publish-panel";
 import type { PublishState } from "@/lib/publish-actions";
 import {
@@ -1007,6 +1008,21 @@ export function DocumentEditor({
       .finally(() => setExporting(false));
   }, [exporting]);
 
+  // ── Export to Markdown ────────────────────────────────────────────────
+  // Build a .md file from the document and download it. Markdown isn't a
+  // viewable format, so a download (not a new tab) is the natural fit — and
+  // downloads aren't subject to the popup blocker, so this stays synchronous.
+  const handleExportMarkdown = useCallback(() => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    try {
+      exportDocumentToMarkdown({ title: titleRef.current, editor });
+    } catch (err) {
+      console.error("Markdown export failed", err);
+      setSave("error");
+    }
+  }, []);
+
   async function handleDelete() {
     if (!confirm("Move this document to trash?")) return;
     setDeleting(true);
@@ -1556,6 +1572,14 @@ export function DocumentEditor({
                   }}
                 >
                   Export to PDF
+                </MenuItem>
+                <MenuItem
+                  onClick={() => {
+                    close();
+                    handleExportMarkdown();
+                  }}
+                >
+                  Export to Markdown
                 </MenuItem>
               </>
             )}

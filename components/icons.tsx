@@ -325,9 +325,9 @@ export function ExportIcon({ className }: { className?: string }) {
   );
 }
 
-// A sailing ship setting off to the right — its single sail billows rightward
-// (catching wind from the left), riding a short waterline. Used as the trigger
-// for the Publish / Export dropdown ("set your document out into the world").
+// A simple sailboat: a mast, one triangular sail set to the right, and a clean
+// hull. Used as the trigger for the Publish / Export dropdown ("set your
+// document out into the world").
 export function ShipIcon({ className }: { className?: string }) {
   return (
     <svg
@@ -338,16 +338,9 @@ export function ShipIcon({ className }: { className?: string }) {
       aria-hidden
       className={className}
     >
-      {/* mast */}
+      {/* mast + triangular sail */}
       <path
-        d="M12 3.2V15"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-      />
-      {/* sail — billowing toward the right */}
-      <path
-        d="M12 4c4.2 1.5 5.7 5.6 3.9 8.7H12Z"
+        d="M12 3.5V14M12 5.5l5.5 8.5H12Z"
         stroke="currentColor"
         strokeWidth="1.6"
         strokeLinejoin="round"
@@ -355,20 +348,11 @@ export function ShipIcon({ className }: { className?: string }) {
       />
       {/* hull */}
       <path
-        d="M4 15.4h16c-1 3-3.5 4.7-6.7 4.7h-2.6C7.5 20.1 5 18.4 4 15.4Z"
+        d="M4 14.5h16c-1.1 3.1-3.7 5-8 5S5.1 17.6 4 14.5Z"
         stroke="currentColor"
         strokeWidth="1.6"
         strokeLinejoin="round"
         strokeLinecap="round"
-      />
-      {/* waterline */}
-      <path
-        d="M3 21c1.1.7 2.2.7 3.3 0s2.2-.7 3.3 0 2.2.7 3.4 0 2.2-.7 3.3 0 2.2.7 3.4 0"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        opacity="0.55"
       />
     </svg>
   );
