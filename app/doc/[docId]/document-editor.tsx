@@ -18,6 +18,7 @@ import type { PublishState } from "@/lib/publish-actions";
 import {
   FONTS,
   applyFontFamily,
+  startFontRun,
   applyFontSize,
   currentFontId,
   currentSize,
@@ -265,7 +266,9 @@ export function DocumentEditor({
           (f as HTMLElement).style.removeProperty("--played");
           f.removeAttribute("data-playing");
         });
-        html = clone.innerHTML;
+        // Strip the zero-width spaces that anchor "type-ahead" font runs (see
+        // startFontRun) — they're a live-editing aid, not content.
+        html = clone.innerHTML.replace(/\u200B/g, "");
       }
 
       // Orphan cleanup: any media we knew about that's no longer in the doc was
@@ -680,16 +683,22 @@ export function DocumentEditor({
     [active.heading, exec],
   );
 
-  // ── Font family + size (selection-based, Word-style) ──────────────────────
-  // Both apply inline styles to the selected text via lib/inline-style (which
-  // works around execCommand's font limitations). No-op on a bare caret — these
-  // act on a selection. refreshActive then re-reads the selection for the UI.
+  // ── Font family + size (Word-style) ───────────────────────────────────────
+  // With a selection: style it via lib/inline-style. With just a caret: start a
+  // "type-ahead" run so whatever you type next (and following lines) comes out
+  // in the chosen font — pick the font first, then write. refreshActive re-reads
+  // the caret for the UI afterwards.
   const setFont = useCallback(
     (value: string) => {
       const editor = editorRef.current;
       if (!editor) return;
       editor.focus();
-      if (applyFontFamily(editor, value)) {
+      const sel = window.getSelection();
+      const changed =
+        sel && !sel.isCollapsed
+          ? applyFontFamily(editor, value)
+          : startFontRun(editor, value);
+      if (changed) {
         refreshActive();
         scheduleSave();
       }

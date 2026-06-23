@@ -115,6 +115,38 @@ export function applyFontFamily(editor: HTMLElement, value: string): boolean {
   });
 }
 
+// Begin a "type-ahead" font run at a COLLAPSED caret — the counterpart to
+// applyFontFamily for when nothing is selected. We insert an empty <span> in the
+// chosen font, anchored by a zero-width space (an empty inline element gives the
+// caret nowhere to live), and drop the caret inside it. The browser then types
+// the next characters straight into that span, so they inherit the font — and so
+// do new lines split off from it. The ZWSP is stripped from the saved HTML.
+// Returns false when there's a real selection (caller should style that) or when
+// "Default" is chosen but the caret isn't inside a font run (already default).
+export function startFontRun(editor: HTMLElement, value: string): boolean {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0 || !sel.isCollapsed) return false;
+  if (!editor.contains(sel.anchorNode)) return false;
+  if (!value && currentFontId(editor) === "default") return false;
+
+  const span = document.createElement("span");
+  // A real font uses its stack; "Default" gets the editor's own base family, so
+  // the run still overrides any surrounding font span the caret sits inside.
+  span.style.fontFamily = value || getComputedStyle(editor).fontFamily;
+  const anchor = document.createTextNode("\u200B"); // zero-width space
+  span.appendChild(anchor);
+
+  sel.getRangeAt(0).insertNode(span);
+
+  // Caret just past the zero-width space, inside the span → typing flows in.
+  const caret = document.createRange();
+  caret.setStart(anchor, 1);
+  caret.collapse(true);
+  sel.removeAllRanges();
+  sel.addRange(caret);
+  return true;
+}
+
 export function applyFontSize(editor: HTMLElement, sizeLabel: number): boolean {
   const px = sizeToPx(sizeLabel);
   return styleSelection(editor, (span) => {
