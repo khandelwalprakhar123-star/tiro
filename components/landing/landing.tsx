@@ -2,6 +2,7 @@ import { RevealManager } from "./reveal-manager";
 import { InkSpine } from "./ink-spine";
 import { SiteNav } from "./site-nav";
 import { Hero } from "./hero";
+import { ShorthandBand } from "./shorthand-band";
 import { EditorMock } from "./editor-mock";
 import { MediaShowcase } from "./media-showcase";
 import { PublishBand } from "./publish-band";
@@ -68,6 +69,7 @@ export function Landing() {
             </div>
           </section>
 
+          <ShorthandBand />
           <MediaShowcase />
           <PublishBand />
           <AudienceTabs />

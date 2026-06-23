@@ -225,6 +225,16 @@ See the 2026-06-22 changelog entry. **Not yet committed.**
 ## Changelog
 
 ### 2026-06-24
+- **Landing page: new "Go Marco" shorthand band** (`components/landing/shorthand-band.tsx`; wired into
+  `landing.tsx` right after the "one page" proof section, + a `#shorthand` nav link in `site-nav.tsx`).
+  Built with the `/impeccable` skill in the brand register. Emphasises speed/efficiency: a "Format at the
+  speed of thought" headline (self-drawing scribble motif), a `Select → type a marco → ↵` flow, a
+  product-faithful demo vignette (the real in-editor marco HUD applying `h1`), and a warm "Every marco"
+  cheat-sheet card listing all marcos grouped (Emphasis/Align/Structure/Type/Lists/Insert/Ship) with keycap
+  `<kbd>` chips + dotted-leader rows. Mono (`--font-jetbrains`) used ONLY inside code chips (literal
+  keystrokes), not as decorative voice — keeps the warm-editorial brand. Server-rendered; reveals only
+  enhance (no-JS/reduced-motion safe). Browser-verified at 1280px + 390px (no overflow), `tsc`/`eslint`
+  clean, zero console errors. The marco list mirrors `runMarco()` + `prd.md` §15 — keep all three in sync.
 - **Terminology decision (per owner): the shorthand codes are called "marcos".** Canonical vocabulary going
   forward — one **marco** = one shorthand code (`h1`, `b`, `fc red`); **Go Marco** = the mode you type them
   in; "going marco" = enabling it. Use "marco(s)" (not "shortcut"/"shorthand code") in UI copy, docs, and
