@@ -1,4 +1,4 @@
--- DeeScribe — doc-videos storage bucket
+-- Tiro — doc-videos storage bucket
 --
 -- Holds videos inserted into documents. Mirrors the `doc-images` bucket model:
 -- public-READ (so a <video src> plays for anyone with the URL), but a user may

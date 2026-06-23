@@ -1,4 +1,4 @@
--- DeeScribe — doc-images storage bucket
+-- Tiro — doc-images storage bucket
 --
 -- Holds images inserted into documents. Mirrors the `avatars` bucket model:
 -- public-READ (so an <img src> renders for anyone with the URL), but a user may

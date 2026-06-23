@@ -1,12 +1,14 @@
-# DeeScribe — Product Requirements Document
+# Tiro — Product Requirements Document
 
-> **For the implementing agent (Opus 4.8):** This document is the single source of truth for building DeeScribe. Read it end-to-end before writing code. It is intentionally prescriptive about the data model, routing, and the tricky technical details (media playback, reference copies, exports). Where a decision is left open, it is flagged in **§13 Assumptions & Open Questions** — surface those to the user rather than guessing silently. Build in the phase order given in **§14**.
+> **Naming note:** this product was originally specced under the name *DeeScribe* and renamed to **Tiro** (domain `tiro.works`) on 2026-06-16. This frozen vision doc uses the current name, Tiro.
+
+> **For the implementing agent (Opus 4.8):** This document is the single source of truth for building Tiro. Read it end-to-end before writing code. It is intentionally prescriptive about the data model, routing, and the tricky technical details (media playback, reference copies, exports). Where a decision is left open, it is flagged in **§13 Assumptions & Open Questions** — surface those to the user rather than guessing silently. Build in the phase order given in **§14**.
 
 ---
 
 ## 1. Overview
 
-**DeeScribe** is a web-based document writing and editing application. Users write rich, multimodal documents — text, images, URLs, audio, and video — organize them into folders, and export or publish them. Think "Google Docs with first-class media embeds," built on a modern serverless stack.
+**Tiro** is a web-based document writing and editing application. Users write rich, multimodal documents — text, images, URLs, audio, and video — organize them into folders, and export or publish them. Think "Google Docs with first-class media embeds," built on a modern serverless stack.
 
 - **One-liner:** A multimodal document editor where writing, media, and publishing live in one place.
 - **Primary platform:** Responsive web app (desktop-first editing, fully usable on tablet and mobile).
@@ -325,7 +327,7 @@ Serialize the custom document model (§4.5) to Markdown with your own serializer
 
 A custom **Audio** player and **Video** player are required. Both use an **Egg-Yolk yellow** accent.
 
-> **Design token:** `--deescribe-yolk` ≈ `#FFB300` (a rich yolk yellow). Treat this as the single accent variable; the exact hex can be tuned, but all player accents (progress fill, sliders, active controls) must read from this one token.
+> **Design token:** `--tiro-yolk` ≈ `#FFB300` (a rich yolk yellow). Treat this as the single accent variable; the exact hex can be tuned, but all player accents (progress fill, sliders, active controls) must read from this one token.
 
 ### 9.1 Audio player
 - A **playable embed** with a **decorative, arbitrary waveform UI** — i.e., render fake/static waveform bars; **do not** analyze or measure real audio amplitude. The bars are purely visual.

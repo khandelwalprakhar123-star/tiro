@@ -1,4 +1,4 @@
--- DeeScribe — documents table (skeleton slice)
+-- Tiro — documents table (skeleton slice)
 -- Applied via the Supabase dashboard SQL editor (MCP schema writes are denied).
 -- Mirrors prd-vision.md §4.2. Folders / document_folders come in a later slice.
 

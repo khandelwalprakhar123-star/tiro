@@ -52,3 +52,9 @@ OVERVIEW.md
 
 # git worktrees created for parallel feature work (full checkouts, never commit)
 .claude/worktrees/
+
+# locally-installed agent tooling / skills (not project code)
+.agents/
+.codex/
+.impeccable/
+.claude/skills/

@@ -222,6 +222,69 @@ See the 2026-06-22 changelog entry. **Not yet committed.**
 
 ## Changelog
 
+### 2026-06-24
+- **PRD refresh — `prd.md` now matches shipped reality.** The living-PRD status table and sections had
+  drifted (still showed editor/folders "in progress", publish "needs DNS", and had no sections for the
+  features that shipped since). Updated: §2 tech stack (Next 16/React 19, fonts, jsPDF), §3 status table
+  (rich text + fonts + colour + media + folders + exports + landing all ✅; added an architecture note that
+  the from-scratch block model of vision §4.5 is **not pursued** — the HTML model is the shipped design),
+  §4 (Google app published), §6 (slices 2–4: rich text, fonts incl. colour, media embeds), §7 (drag-and-drop
+  + nesting + trash shipped), §9 (audio runtime-confirmed; ffmpeg-free video note), §11 (publish **fully
+  live** — wildcard DNS done), §10 (open questions trimmed; export-doesn't-carry-inline-style noted), and
+  **new sections §12 Export (PDF/Markdown), §13 Landing page, §14 Headers & footers (planned)**.
+- **`.gitignore`** — added the locally-installed agent tooling dirs (`.agents/`, `.codex/`, `.impeccable/`,
+  `.claude/skills/`) so they're never accidentally committed.
+- **Font colour — per-selection text colour (feature branch `feat/font-color`).** New toolbar control to
+  the right of the font-size stepper. Selection-based, same model as the font-family/size controls:
+  styles the highlighted text, or (bare caret) starts a "type-ahead" colour run.
+  - **Trigger:** a capital **A** banded red/green/blue via a hard-stop `background-clip:text` gradient (cut
+    at asymmetric heights — 0/38/66% — so the bands read roughly even over the triangular glyph but aren't
+    symmetric), with a thin underline bar showing the **active** colour (reflects `currentColor` at the caret).
+  - **Panel — two tabs (`Choose` default, `Wheel`):**
+    - **Choose:** a **10×10 swatch grid**. Row 0 = 10-step black→white greyscale; rows 1–9 = hue across the
+      columns (0–324° in 36° steps), light→dark down the rows (HSL lightness 0.92→0.14). Plus a **Default
+      colour** button that clears the inline colour. Click a swatch → apply + close.
+    - **Wheel:** a large **circular HSV wheel** (240px) drawn on a `<canvas>` (hue = angle, saturation =
+      radius, full value), a **brightness slider** applied as a CSS black-overlay (no per-frame redraw), a
+      marker dot, a live **preview square**, an **Apply** button, and **HEX + R/G/B inputs** (typing any of
+      them moves the wheel). Selecting Wheel also slides out an **Add** panel to its right (allowed to
+      overlap). The main panel is a **fixed width** (`16.5rem`) so it grows vertically (taller wheel) rather
+      than horizontally — the inputs row was previously stretching it too wide.
+    - **Add panel (custom slots):** an **8×2 = 16-slot** grid. **Drag** the wheel's preview square into a
+      slot to save it (HTML5 DnD, `text/color`); **left-click** a filled slot to apply; **right-click** a
+      filled slot → a red **Delete**. Slots persist in **localStorage** (`tiro:custom-colors`), loaded via a
+      lazy `useState` initializer (no SSR/hydration mismatch — the panel isn't rendered until opened).
+  - **Selection preservation:** typing in the HEX/RGB inputs steals focus and collapses the editor
+    selection, so the control **snapshots the selection range** when it opens (on the trigger's mousedown)
+    and **restores it** right before calling `onPick`. Swatch/slot clicks `preventDefault` mousedown to keep
+    the live selection anyway; the snapshot covers the input-driven path.
+  - **Files:** `lib/inline-style.ts` (+`applyFontColor`, `startColorRun`, `currentColor`, `rgbToHex`; mirror
+    the font-family fns — `<span style="color:…">`, ZWSP anchor stripped on save by the existing
+    `​` strip). `app/doc/[docId]/font-color-control.tsx` (**new** — all colour maths + UI; client-only).
+    `document-editor.tsx`: `ActiveMarks.color` + `EMPTY_ACTIVE` + `refreshActive` (`currentColor`), a
+    `setColor` handler (selection→`applyFontColor`, caret→`startColorRun`), and `<FontColorControl>` rendered
+    after the size stepper.
+  - **Bugfix during build:** the right-click Delete menu showed but didn't fire — the outside-click handler
+    called `setMenu(null)` on *every* mousedown, unmounting the menu before its own click. Fixed with a
+    `menuRef` guard (a mousedown inside the menu is ignored by the outside-click logic).
+  - **Verification:** `tsc --noEmit` + `eslint` clean, `next build` passes. Exercised end-to-end in a real
+    browser (Playwright) via a temporary public `/colortest` harness (since the editor is auth-gated):
+    confirmed the RGB-banded trigger, both tabs, the circular wheel + brightness + HEX/RGB inputs, the Add
+    panel layout, **apply recolours text + updates the active bar**, **drag-to-slot saves + persists**,
+    **right-click Delete clears + persists**, and **left-click slot applies** — no console errors. Harness +
+    the temporary `proxy.ts` public-route entry were **removed/reverted** after verifying. **Not yet merged.**
+  - **Known limitation (v1):** PDF/Markdown export don't yet special-case inline colour (PDF renders default
+    ink; the colour `<span>` is just inert markup there — same status as inline font family/size).
+- **Branding — phase 1: kill the "DeeScribe" name in forward-facing docs.** Settling the verbal identity
+  (the product is **Tiro** everywhere user-facing; only stale spec docs still said DeeScribe). Renamed the
+  product references in `prd.md` (title, overview, profile goal) and `prd-vision.md` (title, overview, the
+  `--tiro-yolk` design-token name), and updated the four SQL migration comment headers
+  (`0001`–`0004`, comment-only — no DB behavior change). Added a one-line **provenance note** to the top of
+  `prd-vision.md` recording the 2026-06-16 DeeScribe→Tiro rename rather than erasing it. **`tracker.md` left
+  untouched on purpose** — its historical changelog and the still-accurate Supabase project display name
+  ("DeeScribe", pending dashboard rename) are intentional records, not name references to fix. Next:
+  consolidate the verbal identity (tagline "Write with everything." + one-liner + voice guide) into a `brand.md`.
+
 ### 2026-06-23
 - **Landing page de-misleading + scroll-driven SVG motion** (`/impeccable polish`, brand register). Two
   fixes, prompted by the owner: the page implied Tiro turns scribbles into text (it doesn't — it's a

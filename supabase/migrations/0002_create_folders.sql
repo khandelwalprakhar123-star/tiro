@@ -1,4 +1,4 @@
--- DeeScribe — folders + document↔folder links (organise slice)
+-- Tiro — folders + document↔folder links (organise slice)
 -- Run in the Supabase dashboard SQL editor. Mirrors prd-vision.md §4.1–4.3.
 -- Safe to re-run (IF NOT EXISTS / drop-then-create policies).
 

@@ -1,4 +1,4 @@
-# DeeScribe — Living PRD
+# Tiro — Living PRD
 
 > **How to use this document.** This is a *living* PRD, not a final spec. It starts small and grows
 > one feature at a time. As we design and ship each feature, we add its section here with just enough
@@ -15,7 +15,7 @@
 
 ## 1. What we're building (one paragraph)
 
-DeeScribe is a web-based, multimodal document editor — "Google Docs with first-class media embeds."
+Tiro is a web-based, multimodal document editor — "Google Docs with first-class media embeds."
 Users write rich documents (text, images, links, audio, video), organize them into folders, and export
 or publish them. Built on Next.js (App Router) + Supabase + Vercel + Tailwind.
 
@@ -25,10 +25,12 @@ or publish them. Built on Next.js (App Router) + Supabase + Vercel + Tailwind.
 
 | Layer | Choice |
 |---|---|
-| Framework | Next.js (App Router) + TypeScript |
-| Auth + DB + Storage | Supabase |
-| Styling | Tailwind CSS |
-| Hosting | Vercel |
+| Framework | Next.js 16 (App Router) + React 19 + TypeScript + Turbopack |
+| Auth + DB + Storage | Supabase (`@supabase/ssr`, cookie sessions) |
+| Styling | Tailwind CSS v4 (`@theme` in `globals.css`) |
+| Hosting | Vercel (auto-deploys `main` → `tiro.works`; DNS managed by Vercel) |
+| Fonts | `next/font/google` — Fraunces + Hanken Grotesk (brand), plus Lora, Source Serif 4, Inter, JetBrains Mono (editor font picker) |
+| Export | `jsPDF` (hand-written DOM-walking renderer) for PDF; hand-written Markdown walker |
 
 We add rows/details here as we adopt them. Nothing is locked beyond what we've actually used.
 
@@ -41,14 +43,25 @@ We add rows/details here as we adopt them. Nothing is locked beyond what we've a
 | Authentication (Email OTP + Google) | ✅ Done | §4 |
 | Profile (avatar, display name, status, photo viewer) | ✅ Done | §5 |
 | Documents — create/edit/delete | ✅ Done | §6 |
-| Editor — rich text (bold/italic/underline, H1–5, bullets) | 🔨 In progress | §6 |
-| Editor — block model + media embeds (from scratch) | 🧊 Planned | §6 |
-| Folders / organise (many-to-many) | 🔨 In progress | §7 |
+| Editor — rich text (bold/italic/underline, H1–5, bullets, numbered, checklist, align) | ✅ Done | §6 |
+| Editor — fonts (per-selection family, size, **colour**) | ✅ Done | §6 |
+| Media embeds — images, video, audio, pasted-link cards | ✅ Done | §6 / §9 |
+| Folders / organise (many-to-many, drag-and-drop filing, nesting) | ✅ Done | §7 |
 | Trash — restore / permanent delete | ✅ Done | §8 |
-| Audio embeds + custom player (real waveform) | ✅ Done (volume deferred; runtime test pending) | §9 |
-| Publish to web (`<slug>.tiro.works`, public, no login) | ✅ Done (needs migration applied + wildcard DNS) | §11 |
+| Audio embeds + custom player (real waveform) | ✅ Done (volume deferred) | §9 |
+| Publish to web (`<slug>.tiro.works`, public, no login) | ✅ Done — **live** | §11 |
+| Export — PDF (new tab) + Markdown (download) | ✅ Done | §12 |
+| Marketing landing page (`/`, logged-out) | ✅ Done | §13 |
+| Editor — true from-scratch block model (vision §4.5) | ❌ Not pursued — see §6 | §6 |
+| Headers & footers | 🧊 Planned | §14 |
 
-Legend: 🔨 in progress · ✅ done · 🧊 planned · ❌ dropped
+Legend: 🔨 in progress · ✅ done · 🧊 planned · ❌ dropped/not-pursued
+
+> **Note on the editor architecture.** `prd-vision.md` §4.5 imagined a bespoke JSON *block model*. In
+> practice the editor is `contenteditable` + an HTML content model (`{version:2, html}`) with media as
+> top-level `<figure>` blocks, and it carries every feature we need (rich text, fonts, all four media
+> types, export, publish). The from-scratch block-model rewrite is therefore **not being pursued** — the
+> HTML model is the shipped, source-of-truth design.
 
 ---
 
@@ -70,13 +83,14 @@ Legend: 🔨 in progress · ✅ done · 🧊 planned · ❌ dropped
 - AC4: Logging out clears the session and redirects to login.
 
 **Status:** ✅ Both flows work end-to-end. Email OTP via Resend SMTP; Google OAuth via a Google Cloud
-OAuth client wired into Supabase. (Google app still in "Testing" mode — publish before public launch.)
+OAuth client wired into Supabase. **Google app is published** (a brand-new, non-allow-listed email signs
+in successfully — not gated to test users).
 
 ---
 
 ## 5. Profile ✅
 
-**Goal:** let a logged-in user manage how they appear across DeeScribe
+**Goal:** let a logged-in user manage how they appear across Tiro
 **What it does**
 - Edit **display name** and **status** (short tagline); upload a **profile picture** (avatar).
 - Avatar is stored in the Supabase `avatars` storage bucket; the rest lives in the `profiles` table row.
@@ -96,9 +110,9 @@ OAuth client wired into Supabase. (Google app still in "Testing" mode — publis
 
 ---
 
-## 6. Documents 🔨
+## 6. Documents ✅
 
-**Goal:** create, edit, organise, and delete documents (`prd-vision.md` §2). Being built in slices.
+**Goal:** create, edit, organise, and delete documents (`prd-vision.md` §2). Built in slices (below).
 
 **Slice 1 — skeleton (current):** lifecycle plumbing with a plain-textarea editor.
 - `documents` table (migration `supabase/migrations/0001_create_documents.sql`, RLS owner-only). `content`
@@ -113,20 +127,36 @@ OAuth client wired into Supabase. (Google app still in "Testing" mode — publis
 - AC3: Workspace lists all live docs and links to each.
 - AC4: Delete moves the doc to trash (disappears from the list; row kept via `deleted_at`).
 
-**Slice 2 — rich text formatting (current):** the body is now a `contenteditable` region with a sticky
-toolbar. Supported: **bold, italic, underline** (apply to the text selection), **headings H1–H5** and
-**bullets** (apply to the cursor's block; clicking the active heading again returns to normal text).
+**Slice 2 — rich text formatting ✅:** the body is a `contenteditable` region with a sticky toolbar.
+Supported: **bold, italic, underline** (text selection), **headings H1–H5**, **bullet + numbered lists**,
+**checklists** (toggleable, with tick boxes), and **left/center/right alignment** (cursor's block).
 - Implemented with the browser's `execCommand` as a *mutation convenience only* — the saved HTML is the
-  source of truth (spec §4.5 permits this). Paste is stripped to plain text (safe; no raw HTML injected).
-- Storage shape changed: `content` is now `{ version: 2, html }`. Old `{ plain }` docs auto-convert to
-  paragraphs on open.
+  source of truth. Paste is stripped to plain text (safe; no raw HTML injected).
+- Storage shape: `content` is `{ version: 2, html }`. Old `{ plain }` docs auto-convert on open.
 
-**Next slices:** full block model + media embeds (§4.5) · folders + reference copies (§4.1) · trash
-view/restore.
+**Slice 3 — fonts ✅ (per-selection family, size, colour):** left-of-toolbar controls that style the
+selection (Word/Docs model), or — at a bare caret — start a "type-ahead" run so the next text you type
+comes out styled.
+- **Family:** a dropdown of 12 options (Default + Fraunces, Hanken, Lora, Source Serif, Inter, JetBrains
+  Mono, and system Georgia/Times/Arial/Calibri/Helvetica).
+- **Size:** a ±1 stepper on an abstract Word-style scale (body = 11 ≈ 18px; clamped 6–96).
+- **Colour:** an RGB-banded "A" trigger opening a panel with two tabs — **Choose** (a 10×10 swatch grid;
+  top row greyscale) and **Wheel** (a circular HSV wheel + brightness + HEX/R/G/B inputs), plus an **Add**
+  panel of 16 drag-to-save custom slots (right-click to delete; persisted in localStorage).
+- **Why a custom primitive (`lib/inline-style.ts`):** `execCommand` can't set arbitrary px sizes or our
+  `var(--font-*)` families, so we use `fontSize("7")` purely as a *marker* to wrap the selection, then
+  rewrite each marker `<font>` into a `<span>` carrying the real inline style (family / size / colour).
+
+**Slice 4 — media embeds ✅:** images, video, audio (§9), and pasted-URL link-preview cards, all as
+top-level `<figure>` blocks. See §9 (audio) and §13-adjacent notes; full media details live in the tracker.
+Each bucket is public-read + owner-scoped write; orphaned files are swept on save.
+
+**Note:** the from-scratch JSON *block model* of vision §4.5 was **not pursued** — the HTML model above is
+the shipped design (see the architecture note under §3).
 
 ---
 
-## 7. Folders / organise 🔨
+## 7. Folders / organise ✅
 
 **Goal:** organise documents into folders (`prd-vision.md` §4.1). A document can live in **many** folders
 at once and is still one underlying record — edits propagate everywhere; "filing" never duplicates.
@@ -148,8 +178,10 @@ only if you own both the document and the folder). Migration `supabase/migration
 - AC3: Removing a doc from one folder doesn't delete it or affect other folders.
 - AC4: Deleting a folder keeps its documents (they remain under All documents / other folders).
 
-**Not yet:** nested folders (column exists, no UI) · drag-and-drop · trash view for restoring deleted
-folders/docs.
+**Also shipped since:** **drag-and-drop** filing (docs and folders are HTML5-draggable; folder cards are
+drop targets — drop a doc to file it, drop a folder onto a folder to **nest** it via `moveFolderIntoFolder`,
+with a cycle guard) and the **trash view** for restoring deleted folders/docs (§8). A shared
+`application/x-deescribe` drag payload carries the dragged item.
 
 ---
 
@@ -222,14 +254,22 @@ and we're leaving it out of the first cut. The player ships with play/pause + se
 
 **Build order:** (1) `doc-audio` bucket migration ✅ applied · (2) insert + upload + waveform compute ✅ ·
 (3) player UI (play/pause, seek, yolk fill) ✅ · (4) editor seams + orphan cleanup ✅ · (5) volume
-GainNode — deferred. **Runtime test pending** (auth-gated).
+GainNode — **deferred**. **Runtime-confirmed working** (a `play()`-rejection overlay + swallowed
+insert-error bugs were found and fixed during the first live test).
+
+**Video note (deviation from vision):** video ships **ffmpeg-free** — the original file is stored as-is
+(≤60 s, ≤200 MB) with a client-captured poster frame; no server-side transcode (it was a Vercel
+serverless-timeout liability). Trade-off: no compression, and HEVC `.mov` may not play outside Safari
+(warned, not blocked).
 
 ---
 
 ## 10. Open questions / assumptions
 
 - Email OTP = **6-digit code** flow (not magic link). Confirm if you'd prefer the clickable magic link instead.
-- Exact shade of the "Egg-Yolk" accent and other product details are deferred until we reach those features.
+- **Egg-Yolk accent locked** at `#ffb300` (single accent, PRD §9 / vision).
+- **Export does not yet carry inline styling** — the PDF and Markdown exporters ignore inline font family,
+  size, and colour (the colour/font `<span>`s are inert in those paths). Additive follow-up if wanted.
 
 ---
 
@@ -266,6 +306,55 @@ video) work fully on the public page. One sharing mode only (this slice): **anyo
 - AC4: **Unpublish** makes the public page 404.
 - AC5: An anonymous visitor can never reach an *unpublished* document.
 
-**Status:** ✅ Code + migration written; `tsc`/`eslint`/`next build` clean. **To go fully live:** apply
-migration 0006 to remote, and add wildcard DNS (`*.tiro.works`) + the `*.tiro.works` domain in Vercel. Until
-the wildcard domain resolves, published docs are viewable at the path form `tiro.works/p/<slug>`.
+**Status:** ✅ **Fully live.** Migration 0006 is applied to remote, and **wildcard subdomains resolve** —
+e.g. `https://scarlet-river-3638.tiro.works/` returns HTTP 200 with valid SSL and serves the published doc
+with no login redirect. Going live required adding `*.tiro.works` in Vercel and **moving the domain's
+nameservers GoDaddy → Vercel** (wildcard SSL needs Vercel-controlled DNS for the Let's Encrypt DNS-01
+challenge). DNS records now live in **Vercel DNS** (GoDaddy still holds the registration). The path form
+`tiro.works/p/<slug>` also works.
+
+---
+
+## 12. Export — PDF + Markdown ✅
+
+**Goal:** get a document out of Tiro in a portable format.
+
+**PDF (`lib/export-pdf.ts`)** — **opens in a new browser tab, never force-downloads.** Built with
+**`jsPDF`** + a **hand-written DOM-walking renderer** (not html2canvas / headless Chromium), so it emits
+**real selectable text** with the paper/ink look, small files, and no cross-origin canvas taint. Honors
+headings, B/I/U, all list types (incl. checklist tick boxes), images (width-% + align + flips/filters),
+captions, multi-page pagination, and the paper background. Media degrades gracefully (video → poster + tag,
+audio → chip, link card → thumbnail/title/URL). Images are brought in CORS-safely (fetch → canvas → JPEG).
+
+**Markdown (`lib/export-markdown.ts`)** — **downloads** a `.md` file (Markdown isn't viewable, and a
+download dodges the popup blocker). Same clone-and-strip pipeline as PDF, then a hand-written walker (no
+`turndown` dep) that understands the editor's custom figure/checklist nodes. Media degrades: image →
+`![caption](src)`, video/audio → link or placeholder, link card → `[title](url)`.
+
+Both live behind a single toolbar **"ship" dropdown** (`ShipIcon`) alongside **Publish to web**, with a
+yolk dot when the doc is currently published.
+
+**Known limitation:** neither exporter applies inline font family / size / colour yet (see §10).
+
+---
+
+## 13. Marketing landing page ✅
+
+**Goal:** give logged-out visitors a real brand landing page at `/` (signed-in users still redirect to
+`/workspace`).
+
+Lives in `components/landing/*` (composed by `landing.tsx`): sticky nav, hero, editor mock, media
+showcase, a full-bleed drenched-ink **Publish band**, audience tabs, closing CTA, footer. Preserves the
+paper/ink/egg-yolk + Fraunces/Hanken identity and reuses the editor's own `.doc-content` CSS so mockups
+match the real editor (real audio waveform, link-card unfurl, image figures). **Scroll-driven ink**: a
+marginal pen-line SVG draws top→bottom with scroll, and a heading underline scrubs as it crosses the
+viewport — all gated behind `html.reveal-armed` so no-JS / reduced-motion / crawlers get the finished,
+visible state. Honest framing: Tiro is described as a *multimodal text editor* (no capture-to-text claims).
+
+---
+
+## 14. Headers & footers 🧊 (planned)
+
+**Goal:** per-document header and footer content. The `documents` table already has `header` + `footer`
+jsonb columns reserved for this, but **there is no editor UI yet** — this is the next unbuilt document
+slice.
