@@ -20,10 +20,14 @@ import {
   applyFontFamily,
   startFontRun,
   applyFontSize,
+  applyFontColor,
+  startColorRun,
   currentFontId,
   currentSize,
+  currentColor,
   DEFAULT_SIZE,
 } from "@/lib/inline-style";
+import { FontColorControl } from "./font-color-control";
 import {
   AudioFrameIcon,
   ChecklistIcon,
@@ -89,6 +93,7 @@ type ActiveMarks = {
   heading: number | null; // 1–5, or null for normal paragraph
   fontId: string; // catalogue id of the selection's font, or "default"/"custom"
   fontSize: number; // size label at the caret (Word-style scale; body = 11)
+  color: string; // inline colour at the caret as #rrggbb, or "" for default
 };
 
 const EMPTY_ACTIVE: ActiveMarks = {
@@ -101,6 +106,7 @@ const EMPTY_ACTIVE: ActiveMarks = {
   heading: null,
   fontId: "default",
   fontSize: DEFAULT_SIZE,
+  color: "",
 };
 
 // Shared toolbar button styling (used by plain buttons and the dropdown triggers).
@@ -345,6 +351,7 @@ export function DocumentEditor({
       heading,
       fontId: currentFontId(editor),
       fontSize: currentSize(editor),
+      color: currentColor(editor),
     });
   }, []);
 
@@ -712,6 +719,25 @@ export function DocumentEditor({
       if (!editor) return;
       editor.focus();
       if (applyFontSize(editor, currentSize(editor) + delta)) {
+        refreshActive();
+        scheduleSave();
+      }
+    },
+    [refreshActive, scheduleSave],
+  );
+
+  // Font colour — same selection-vs-caret split as setFont. "" clears it.
+  const setColor = useCallback(
+    (color: string) => {
+      const editor = editorRef.current;
+      if (!editor) return;
+      editor.focus();
+      const sel = window.getSelection();
+      const changed =
+        sel && !sel.isCollapsed
+          ? applyFontColor(editor, color)
+          : startColorRun(editor, color);
+      if (changed) {
         refreshActive();
         scheduleSave();
       }
@@ -1327,6 +1353,13 @@ export function DocumentEditor({
               +
             </button>
           </div>
+
+          {/* Font colour — selection-based, mirrors the font controls. */}
+          <FontColorControl
+            currentColor={active.color}
+            onPick={setColor}
+            getEditor={() => editorRef.current}
+          />
 
           <span className="mx-1 h-6 w-px bg-line" />
 

@@ -155,6 +155,72 @@ export function applyFontSize(editor: HTMLElement, sizeLabel: number): boolean {
   });
 }
 
+// ── Font colour ───────────────────────────────────────────────────────────
+// Same model as font family: style the selection, or (empty value) clear it.
+// `color` is any CSS colour string (we feed it hex like "#ff0000"); "" removes
+// the inline colour so the text falls back to the document's default ink.
+export function applyFontColor(editor: HTMLElement, color: string): boolean {
+  return styleSelection(editor, (span) => {
+    clearDescendant(span, "color");
+    if (color) span.style.color = color;
+  });
+}
+
+// Type-ahead colour run at a COLLAPSED caret — counterpart to startFontRun.
+// Insert an empty <span style="color:…"> anchored by a zero-width space and drop
+// the caret inside, so the next characters (and lines split off it) inherit the
+// colour. The ZWSP is stripped from the saved HTML. Returns false when there's a
+// real selection (caller should style that instead).
+export function startColorRun(editor: HTMLElement, color: string): boolean {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0 || !sel.isCollapsed) return false;
+  if (!editor.contains(sel.anchorNode)) return false;
+  if (!color && currentColor(editor) === "") return false;
+
+  const span = document.createElement("span");
+  span.style.color = color || getComputedStyle(editor).color;
+  const anchor = document.createTextNode("​"); // zero-width space
+  span.appendChild(anchor);
+
+  sel.getRangeAt(0).insertNode(span);
+
+  const caret = document.createRange();
+  caret.setStart(anchor, 1);
+  caret.collapse(true);
+  sel.removeAllRanges();
+  sel.addRange(caret);
+  return true;
+}
+
+// Nearest inline colour from the selection up to the editor, normalised to a
+// lowercase #rrggbb hex; "" when no inline colour is set (i.e. default ink).
+export function currentColor(editor: HTMLElement): string {
+  let node: HTMLElement | null = selectionElement(editor);
+  while (node && node !== editor) {
+    const c = node.style?.color;
+    if (c) return rgbToHex(c);
+    node = node.parentElement;
+  }
+  return "";
+}
+
+// "rgb(255, 0, 0)" / "#f00" / "#ff0000" → "#ff0000". Leaves unknown formats as-is.
+function rgbToHex(color: string): string {
+  const m = color.match(/rgba?\(([^)]+)\)/i);
+  if (m) {
+    const [r, g, b] = m[1].split(",").map((n) => parseInt(n, 10));
+    return (
+      "#" +
+      [r, g, b].map((n) => n.toString(16).padStart(2, "0")).join("")
+    ).toLowerCase();
+  }
+  if (/^#[0-9a-f]{3}$/i.test(color)) {
+    const [, r, g, b] = color;
+    return `#${r}${r}${g}${g}${b}${b}`.toLowerCase();
+  }
+  return color.toLowerCase();
+}
+
 // ── Reading the current selection's font (for toolbar reflection) ─────────────
 // The representative element AT the start of the selection. Crucially this must
 // descend into the boundary's child: after we apply a style we re-select with
