@@ -145,7 +145,7 @@ function ToolbarMenu({
         <span className="text-[8px] leading-none opacity-70">▾</span>
       </button>
       {open && (
-        <div className="absolute left-1/2 top-full z-20 mt-1 min-w-[9rem] -translate-x-1/2 overflow-hidden rounded-lg border border-line bg-paper py-1 shadow-[0_12px_30px_-12px_rgba(33,28,20,0.55)]">
+        <div className="absolute left-1/2 top-full z-20 mt-1 w-max min-w-[9rem] -translate-x-1/2 overflow-hidden rounded-lg border border-line bg-paper py-1 shadow-[0_12px_30px_-12px_rgba(33,28,20,0.55)]">
           {children(() => setOpen(false))}
         </div>
       )}
@@ -167,7 +167,7 @@ function MenuItem({
       type="button"
       onMouseDown={(e) => e.preventDefault()}
       onClick={onClick}
-      className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-ink transition-colors hover:bg-paper-deep"
+      className="flex w-full items-center gap-2 whitespace-nowrap px-3 py-1.5 text-left text-sm text-ink transition-colors hover:bg-paper-deep"
     >
       <span className="w-3 text-yolk-deep">{active ? "✓" : ""}</span>
       {children}
@@ -1545,7 +1545,7 @@ export function DocumentEditor({
               when the doc is currently published. */}
           <ToolbarMenu
             title="Publish or export"
-            active={!!publishState || exporting}
+            active={exporting}
             trigger={
               <span className="relative inline-flex">
                 <ShipIcon className="h-6 w-6" />
@@ -1563,7 +1563,7 @@ export function DocumentEditor({
                     setPublishOpen(true);
                   }}
                 >
-                  {publishState ? "Published — manage…" : "Publish to web"}
+                  {publishState ? "Manage published page" : "Publish to web"}
                 </MenuItem>
                 <MenuItem
                   onClick={() => {

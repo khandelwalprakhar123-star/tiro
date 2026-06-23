@@ -235,7 +235,13 @@ See the 2026-06-22 changelog entry. **Not yet committed.**
 - **Simplified the ship/export logo.** `ShipIcon` (`components/icons.tsx`) reduced from 4 paths to 2 (mast +
   triangular sail, hull) — dropped the curved billowing sail and the 5-bump wavy waterline that read as noise
   at toolbar size.
-- Branch: `feature/export-markdown`.
+- Branch: `feature/export-markdown` (merged to `main`).
+- **Ship-menu polish (follow-up).** Fixed four issues from the first cut: (1) menu items no longer wrap —
+  added `whitespace-nowrap` + `w-max` so "Export to Markdown" sits on one line; (2) confirmed all items are
+  uniform `text-sm` (the apparent "smaller PDF" was just the wrap illusion); (3) renamed the published-state
+  item "Published — manage…" → "Manage published page" (clearer, single line); (4) the ship button no longer
+  turns dark/black when a doc is published — `active` is now `exporting` only (the yolk dot already signals
+  published), so the dark fill means "menu open / exporting", not "published".
 
 ### 2026-06-22
 - **Marketing landing page at `/` (logged-out).** Built Tiro's first real landing page via the `impeccable`
