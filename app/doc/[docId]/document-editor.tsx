@@ -31,6 +31,7 @@ import { FontColorControl } from "./font-color-control";
 import {
   AudioFrameIcon,
   ChecklistIcon,
+  GoMarcoIcon,
   ShipIcon,
   ImageFrameIcon,
   ListIcon,
@@ -183,6 +184,38 @@ function MenuItem({
   );
 }
 
+// ── "Go marco" shorthand helpers ──────────────────────────────────────────
+// Match a typed font name ("times", "mono", "jet") to a catalogue entry, case-
+// and punctuation-insensitively: exact id → label/​id prefix → substring.
+function matchMarcoFont(query: string) {
+  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const q = norm(query);
+  if (!q) return null;
+  return (
+    FONTS.find((f) => norm(f.id) === q) ??
+    FONTS.find((f) => norm(f.label).startsWith(q)) ??
+    FONTS.find((f) => norm(f.id).startsWith(q)) ??
+    FONTS.find((f) => norm(f.label).includes(q)) ??
+    null
+  );
+}
+
+// Resolve a typed colour to something CSS accepts: #rgb / #rrggbb / bare hex, or
+// any named CSS colour ("red", "rebeccapurple"). Returns null if unrecognised.
+function normalizeMarcoColor(input: string): string | null {
+  const v = input.trim();
+  if (!v) return null;
+  const hex = v.replace(/^#/, "");
+  if (/^[0-9a-f]{3}$/i.test(hex) || /^[0-9a-f]{6}$/i.test(hex)) {
+    const full =
+      hex.length === 3 ? hex.split("").map((c) => c + c).join("") : hex;
+    return "#" + full.toLowerCase();
+  }
+  if (typeof CSS !== "undefined" && CSS.supports?.("color", v))
+    return v.toLowerCase();
+  return null;
+}
+
 export function DocumentEditor({
   docId,
   userId,
@@ -236,6 +269,19 @@ export function DocumentEditor({
   const [active, setActive] = useState<ActiveMarks>(EMPTY_ACTIVE);
   const [selectedFigure, setSelectedFigure] = useState<HTMLElement | null>(null);
   const [selectedVideo, setSelectedVideo] = useState<HTMLElement | null>(null);
+
+  // ── "Go marco" shorthand mode ─────────────────────────────────────────────
+  // A modal formatter: toggle on, select text, type a short code, press Enter.
+  // While on, keystrokes build a command buffer (shown in the HUD) instead of
+  // being typed into the doc — Enter applies, Esc clears (or exits when empty).
+  const [marco, setMarco] = useState(false);
+  const [marcoBuf, setMarcoBuf] = useState("");
+  const [marcoFlash, setMarcoFlash] = useState<{
+    text: string;
+    ok: boolean;
+  } | null>(null);
+  const marcoBufRef = useRef(""); // logic source of truth (no stale closure on Enter)
+  const marcoFlashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Save (debounced ~1s) ──────────────────────────────────────────────
   // Reads the LATEST title (ref) + body HTML at fire time, so it never saves
@@ -1079,6 +1125,149 @@ export function DocumentEditor({
     router.refresh();
   }
 
+  // ── "Go marco" shorthand: size setter, flash, dispatcher, key handler ─────
+  // Set an absolute font size (the Word-style label the stepper shows; body=11).
+  const setSize = useCallback(
+    (n: number) => {
+      const editor = editorRef.current;
+      if (!editor) return;
+      editor.focus();
+      if (applyFontSize(editor, Math.max(1, Math.min(400, n)))) {
+        refreshActive();
+        scheduleSave();
+      }
+    },
+    [refreshActive, scheduleSave],
+  );
+
+  // Brief HUD confirmation: "polo" on success (Marco → Polo), else a miss note.
+  const flashMarco = useCallback((text: string, ok: boolean) => {
+    setMarcoFlash({ text, ok });
+    if (marcoFlashTimer.current) clearTimeout(marcoFlashTimer.current);
+    marcoFlashTimer.current = setTimeout(() => setMarcoFlash(null), 1100);
+  }, []);
+
+  // Map a committed code to the existing formatting actions. Case-insensitive;
+  // matches the whole code (so `b`/`bd`, `e`/`eweb` never collide).
+  const runMarco = useCallback(
+    (raw: string): { ok: boolean; label: string } => {
+      const trimmed = raw.trim();
+      const lower = trimmed.toLowerCase();
+      const sp = trimmed.indexOf(" ");
+      const head = sp === -1 ? lower : lower.slice(0, sp);
+      const value = sp === -1 ? "" : trimmed.slice(sp + 1).trim();
+
+      switch (head) {
+        case "b": exec("bold"); return { ok: true, label: "Bold" };
+        case "i": exec("italic"); return { ok: true, label: "Italic" };
+        case "u": exec("underline"); return { ok: true, label: "Underline" };
+        case "l": exec("justifyLeft"); return { ok: true, label: "Left" };
+        case "e": exec("justifyCenter"); return { ok: true, label: "Center" };
+        case "r": exec("justifyRight"); return { ok: true, label: "Right" };
+        case "p": exec("formatBlock", "<p>"); return { ok: true, label: "Normal text" };
+        case "bd": exec("insertUnorderedList"); return { ok: true, label: "Bullets" };
+        case "bn": exec("insertOrderedList"); return { ok: true, label: "Numbered" };
+        case "bc": insertChecklist(); return { ok: true, label: "Checklist" };
+        case "+": case "fs+": nudgeSize(1); return { ok: true, label: "Bigger" };
+        case "-": case "fs-": nudgeSize(-1); return { ok: true, label: "Smaller" };
+        case "ii": fileInputRef.current?.click(); return { ok: true, label: "Insert image" };
+        case "iv": videoInputRef.current?.click(); return { ok: true, label: "Insert video" };
+        case "ia": audioInputRef.current?.click(); return { ok: true, label: "Insert audio" };
+        case "eweb": setPublishOpen(true); return { ok: true, label: "Publish" };
+        case "epdf": handleExportPdf(); return { ok: true, label: "Export PDF" };
+        case "emd": handleExportMarkdown(); return { ok: true, label: "Export Markdown" };
+      }
+
+      const h = head.match(/^h([1-5])$/);
+      if (h) {
+        exec("formatBlock", `<h${h[1]}>`);
+        return { ok: true, label: `Heading ${h[1]}` };
+      }
+
+      const fs = lower.match(/^fs\s*(\d{1,3})$/);
+      if (fs) {
+        setSize(parseInt(fs[1], 10));
+        return { ok: true, label: `Size ${fs[1]}` };
+      }
+
+      if (head === "fc") {
+        if (!value) {
+          setColor("");
+          return { ok: true, label: "Default colour" };
+        }
+        const c = normalizeMarcoColor(value);
+        if (!c) return { ok: false, label: trimmed };
+        setColor(c);
+        return { ok: true, label: `Colour ${c}` };
+      }
+
+      if (head === "f") {
+        const font = matchMarcoFont(value);
+        if (!font) return { ok: false, label: trimmed };
+        setFont(font.value);
+        return { ok: true, label: font.label };
+      }
+
+      return { ok: false, label: trimmed };
+    },
+    [
+      exec,
+      nudgeSize,
+      setSize,
+      setColor,
+      setFont,
+      insertChecklist,
+      handleExportPdf,
+      handleExportMarkdown,
+    ],
+  );
+
+  // Keystroke capture while marco is on: build the buffer; Enter applies, Esc
+  // clears (or exits when already empty), Backspace edits. Modifier combos and
+  // navigation keys pass through (so arrow-selection still works).
+  const handleMarcoKey = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const k = e.key;
+      if (k === "Enter") {
+        e.preventDefault();
+        const code = marcoBufRef.current.trim();
+        if (!code) return;
+        const res = runMarco(code);
+        marcoBufRef.current = "";
+        setMarcoBuf("");
+        flashMarco(
+          res.ok ? `polo — ${res.label}` : `no match: ${res.label}`,
+          res.ok,
+        );
+        return;
+      }
+      if (k === "Escape") {
+        e.preventDefault();
+        if (marcoBufRef.current) {
+          marcoBufRef.current = "";
+          setMarcoBuf("");
+        } else {
+          setMarco(false);
+        }
+        return;
+      }
+      if (k === "Backspace") {
+        e.preventDefault();
+        marcoBufRef.current = marcoBufRef.current.slice(0, -1);
+        setMarcoBuf(marcoBufRef.current);
+        return;
+      }
+      if (k.length === 1) {
+        e.preventDefault();
+        marcoBufRef.current = (marcoBufRef.current + k).slice(0, 40);
+        setMarcoBuf(marcoBufRef.current);
+      }
+      // other keys (arrows, Home/End, …) fall through untouched
+    },
+    [runMarco, flashMarco],
+  );
+
   // ── Toolbar button helper ─────────────────────────────────────────────
   const btn = toolbarBtnClass;
   const activeFont = FONTS.find((f) => f.id === active.fontId) ?? null;
@@ -1087,6 +1276,12 @@ export function DocumentEditor({
   // checklist (new item, or exit the list when the current item is empty).
   const onEditorKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
+      // Shorthand mode swallows typing and turns it into a command buffer.
+      if (marco) {
+        handleMarcoKey(e);
+        return;
+      }
+
       // Backspace at the very start of a block deletes a media embed sitting
       // just before it. Audio/video/image figures are atomic, non-editable
       // blocks, so this is the keyboard way to remove them; the next save's
@@ -1221,7 +1416,7 @@ export function DocumentEditor({
         }
       }
     },
-    [exec, scheduleSave],
+    [exec, scheduleSave, marco, handleMarcoKey],
   );
 
   return (
@@ -1631,6 +1826,33 @@ export function DocumentEditor({
               </>
             )}
           </ToolbarMenu>
+
+          <span className="mx-1 h-6 w-px bg-line" />
+
+          {/* "Go marco" — shorthand formatting mode. Toggle on, select text, type
+              a code (h1, b, fc red…) and press Enter. The zigzag glyph nods to
+              Tiro, inventor of shorthand. */}
+          <button
+            type="button"
+            title={
+              marco
+                ? "Exit shorthand mode (Esc)"
+                : "Go marco — shorthand formatting"
+            }
+            aria-label="Shorthand formatting mode"
+            aria-pressed={marco}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => {
+              marcoBufRef.current = "";
+              setMarcoBuf("");
+              setMarcoFlash(null);
+              setMarco((m) => !m);
+              editorRef.current?.focus();
+            }}
+            className={btn(marco)}
+          >
+            <GoMarcoIcon className="h-6 w-6" />
+          </button>
         </div>
 
         {/* Body — contenteditable rich text */}
@@ -1650,7 +1872,9 @@ export function DocumentEditor({
           onKeyDown={onEditorKeyDown}
           onKeyUp={refreshActive}
           onMouseUp={refreshActive}
-          className="doc-content mt-6 min-h-[55vh] w-full text-ink"
+          className={`doc-content mt-6 min-h-[55vh] w-full rounded-lg text-ink transition-shadow ${
+            marco ? "shadow-[0_0_0_2px_var(--yolk)]" : ""
+          }`}
         />
 
         {/* Contextual image-editing toolbar (floats over the selected image). */}
@@ -1675,6 +1899,35 @@ export function DocumentEditor({
             onChange={scheduleSave}
             onClose={() => setSelectedVideo(null)}
           />
+        )}
+
+        {/* "Go marco" HUD — a floating status pill while shorthand mode is on:
+            the code you're typing, a hint, and a transient "polo" confirmation.
+            pointer-events-none so it never intercepts clicks or selection. */}
+        {marco && (
+          <div className="pointer-events-none fixed bottom-6 left-1/2 z-40 flex -translate-x-1/2 flex-col items-center">
+            {marcoFlash && (
+              <div
+                className={`mb-2 rounded-full px-3 py-1 text-sm font-medium shadow-[0_8px_20px_-8px_rgba(33,28,20,0.55)] ${
+                  marcoFlash.ok ? "bg-yolk text-ink" : "bg-red-600 text-white"
+                }`}
+              >
+                {marcoFlash.text}
+              </div>
+            )}
+            <div className="flex items-center gap-2 rounded-full border border-line bg-paper/95 px-3 py-2 shadow-[0_12px_30px_-12px_rgba(33,28,20,0.55)] backdrop-blur">
+              <GoMarcoIcon className="h-4 w-4 text-yolk-deep" />
+              <span className="text-xs font-semibold uppercase tracking-wide text-yolk-deep">
+                marco
+              </span>
+              <code className="min-w-[3ch] rounded bg-paper-deep px-1.5 py-0.5 font-mono text-sm text-ink">
+                {marcoBuf || <span className="text-ink/40">type a code…</span>}
+              </code>
+              <span className="text-xs text-ink-soft">
+                Enter to apply · Esc to exit
+              </span>
+            </div>
+          </div>
         )}
 
         {/* Publish-to-Web dialog (opened from the ship menu). */}

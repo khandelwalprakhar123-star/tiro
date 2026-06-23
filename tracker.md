@@ -223,6 +223,25 @@ See the 2026-06-22 changelog entry. **Not yet committed.**
 ## Changelog
 
 ### 2026-06-24
+- **"Go marco" shorthand mode built** (branch `feat/go-marco`, not yet merged). A modal formatter in
+  `document-editor.tsx`: a toolbar toggle (using the new `GoMarcoIcon`) turns the editor into command-entry
+  mode — select text, type a short code, press Enter to format. Implementation:
+  - `onEditorKeyDown` intercepts at the top when `marco` is on, routing keys to `handleMarcoKey`, which
+    builds a buffer (Enter applies, Esc clears/exits, Backspace edits; modifier + arrow keys pass through).
+    Selection is preserved because every captured key is `preventDefault`'d — no DOM mutation, so no snapshot
+    needed (unlike `font-color-control.tsx`, which must snapshot because its inputs steal focus).
+  - `runMarco(code)` maps codes to the **existing** helpers (no reimplementation): `exec()` for b/i/u +
+    align + headings + bullets/numbered + `p`; `insertChecklist()`; `nudgeSize()` for `+`/`-`; new `setSize()`
+    (absolute, via `applyFontSize`) for `fs<n>`; `setColor()` for `fc <colour>` (hex/3-hex/named via
+    `CSS.supports`); `setFont()` for `f <name>` (fuzzy match vs `FONTS`); file-input refs for `ii/iv/ia`;
+    `setPublishOpen`/`handleExportPdf`/`handleExportMarkdown` for `eweb/epdf/emd`.
+  - Codes (case-insensitive, whole-match so `b`≠`bd`, `e`≠`eweb`): `b i u`, `l e r`, `h1`–`h5`, `p`,
+    `bd bn bc`, `+ - fs+ fs- fs<n>`, `f <name>`, `fc <colour>`, `ii iv ia`, `eweb epdf emd`.
+  - UX: bottom-centre HUD pill shows the forming code + a "polo" confirmation flash (Marco→Polo); yolk ring
+    on the editor while active. `tsc` + `eslint` clean. **Not yet verified in-browser; not committed.**
+- **`GoMarcoIcon` added (`components/icons.tsx`).** Stroke-only zigzag glyph (sharp double-peak "M" for
+  *M*arco) recreated from an owner-supplied hand-drawn Tironian-style stroke — SVG (not the raster
+  screenshot) so it scales and inherits `currentColor`. Used as the mode's toolbar toggle + HUD glyph.
 - **Headers & footers deferred (per owner).** Marked §14 + the §3 status row in `prd.md` as 🧊 **Deferred**
   (was "planned / next slice"). No code change — the reserved `documents.header`/`footer` jsonb columns keep
   it an additive future change.

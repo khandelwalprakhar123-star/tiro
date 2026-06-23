@@ -358,6 +358,31 @@ export function ShipIcon({ className }: { className?: string }) {
   );
 }
 
+// "Go marco" glyph — a single hand-drawn zigzag pen-stroke: a sharp double
+// peak (an "M" with pointed apexes) for *M*arco, evoking the quick scribal
+// shorthand the mode is named for (Tiro, inventor of shorthand). Round caps
+// keep the penstroke feel; one continuous path, no fill.
+export function GoMarcoIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden
+      className={className}
+    >
+      <path
+        d="M4.5 15 L8.5 6.5 L12 12.5 L15.5 6.5 L20 18"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function FolderIcon() {
   return (
     <svg
