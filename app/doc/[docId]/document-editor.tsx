@@ -10,6 +10,7 @@ import { VideoToolbar } from "./video-toolbar";
 import { useVideoInsert, VIDEO_BUCKET, VIDEO_ACCEPT } from "@/lib/use-video-insert";
 import { useAudioInsert, AUDIO_BUCKET, AUDIO_ACCEPT } from "@/lib/use-audio-insert";
 import { useLinkPreview } from "@/lib/use-link-preview";
+import { useSmoothCaret } from "@/lib/use-smooth-caret";
 import { exportDocumentToPdf } from "@/lib/export-pdf";
 import { exportDocumentToMarkdown } from "@/lib/export-markdown";
 import { PublishDialog } from "./publish-panel";
@@ -215,6 +216,11 @@ export function DocumentEditor({
   const [deleting, setDeleting] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [exporting, setExporting] = useState(false);
+
+  // PROTOTYPE: gliding smooth caret (toggle in the bottom-right). Defaults on so
+  // it's felt immediately; resets each session while we evaluate it.
+  const [smoothCaret, setSmoothCaret] = useState(true);
+  useSmoothCaret(editorRef, smoothCaret);
   // Publish-to-Web: current published page for this doc (drives the "live" dot
   // on the toolbar ship menu) + whether the publish dialog is open.
   const [publishState, setPublishState] = useState<PublishState | null>(
@@ -1639,6 +1645,24 @@ export function DocumentEditor({
           onClose={() => setPublishOpen(false)}
         />
       </div>
+
+      {/* PROTOTYPE toggle — flip the gliding caret on/off to feel the difference.
+          Temporary chrome; removed (or promoted to a real setting) once we decide. */}
+      <button
+        type="button"
+        onClick={() => setSmoothCaret((v) => !v)}
+        aria-pressed={smoothCaret}
+        title="Prototype: smooth gliding caret"
+        className="fixed bottom-5 right-5 z-50 inline-flex items-center gap-2 rounded-full border border-line bg-paper/90 px-4 py-2 text-xs font-medium text-ink-soft shadow-[0_10px_30px_-15px_rgba(33,28,20,0.6)] backdrop-blur-sm transition-colors hover:text-ink"
+      >
+        <span
+          aria-hidden
+          className={`h-2 w-2 rounded-full transition-colors ${
+            smoothCaret ? "bg-yolk-deep" : "bg-ink/25"
+          }`}
+        />
+        Smooth caret: {smoothCaret ? "on" : "off"}
+      </button>
     </main>
   );
 }

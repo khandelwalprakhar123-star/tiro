@@ -833,3 +833,54 @@ html.reveal-armed .scribble-scrub {
     transition: none;
   }
 }
+
+/* ===========================================================================
+   SMOOTH CARET (prototype) — a gliding ink caret for the editor.
+   The native caret is hidden on the host; we draw our own bar (fixed-position,
+   viewport coords) and transition its transform so it flows between positions.
+   Driven imperatively by lib/use-smooth-caret.ts.
+   =========================================================================== */
+.smooth-caret-host {
+  caret-color: transparent; /* hide the browser's caret while ours is active */
+}
+
+.smooth-caret {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 2px;
+  height: 1em;
+  background: var(--ink);
+  border-radius: 1px;
+  pointer-events: none;
+  z-index: 60;
+  opacity: 0;
+  will-change: transform;
+  /* The glide. Short + ease-out so it keeps up with fast typing. */
+  transition: transform 0.1s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.smooth-caret.visible {
+  opacity: 1;
+}
+.smooth-caret.snap {
+  /* Line changes / clicks jump instantly — no diagonal swoop. */
+  transition: none;
+}
+.smooth-caret.blink {
+  animation: smooth-caret-blink 1.1s steps(1, end) infinite;
+}
+.smooth-caret.moving {
+  /* No blink mid-glide — solid bar reads as a moving nib, not a smear. */
+  animation: none;
+  opacity: 1;
+}
+@keyframes smooth-caret-blink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  99% {
+    opacity: 0;
+  }
+}
