@@ -53,7 +53,7 @@ We add rows/details here as we adopt them. Nothing is locked beyond what we've a
 | Export — PDF (new tab) + Markdown (download) | ✅ Done | §12 |
 | Marketing landing page (`/`, logged-out) | ✅ Done | §13 |
 | Editor — true from-scratch block model (vision §4.5) | ❌ Not pursued — see §6 | §6 |
-| Headers & footers | 🧊 Planned | §14 |
+| Headers & footers | 🧊 Deferred | §14 |
 
 Legend: 🔨 in progress · ✅ done · 🧊 planned · ❌ dropped/not-pursued
 
@@ -353,8 +353,8 @@ visible state. Honest framing: Tiro is described as a *multimodal text editor* (
 
 ---
 
-## 14. Headers & footers 🧊 (planned)
+## 14. Headers & footers 🧊 (deferred)
 
 **Goal:** per-document header and footer content. The `documents` table already has `header` + `footer`
-jsonb columns reserved for this, but **there is no editor UI yet** — this is the next unbuilt document
-slice.
+jsonb columns reserved for this, but **there is no editor UI yet**. **Deferred** — not being built now;
+the reserved columns mean it stays a future, additive change whenever we pick it up.

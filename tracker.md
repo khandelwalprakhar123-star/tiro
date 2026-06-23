@@ -223,6 +223,9 @@ See the 2026-06-22 changelog entry. **Not yet committed.**
 ## Changelog
 
 ### 2026-06-24
+- **Headers & footers deferred (per owner).** Marked §14 + the §3 status row in `prd.md` as 🧊 **Deferred**
+  (was "planned / next slice"). No code change — the reserved `documents.header`/`footer` jsonb columns keep
+  it an additive future change.
 - **PRD refresh — `prd.md` now matches shipped reality.** The living-PRD status table and sections had
   drifted (still showed editor/folders "in progress", publish "needs DNS", and had no sections for the
   features that shipped since). Updated: §2 tech stack (Next 16/React 19, fonts, jsPDF), §3 status table
