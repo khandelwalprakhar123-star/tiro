@@ -9,7 +9,7 @@ export function LogoutButton() {
 
   async function logout() {
     await supabase.auth.signOut();
-    router.push("/login");
+    router.push("/"); // back to the marketing landing, not the sign-in screen
     router.refresh();
   }
 

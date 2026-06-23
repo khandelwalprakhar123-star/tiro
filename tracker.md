@@ -225,6 +225,10 @@ See the 2026-06-22 changelog entry. **Not yet committed.**
 ## Changelog
 
 ### 2026-06-24
+- **Logout now returns to the landing page, not the sign-in screen.** `app/workspace/logout-button.tsx`
+  changed `router.push("/login")` → `router.push("/")`. The root is a `PUBLIC_ROUTE` (`proxy.ts`), so a
+  signed-out visitor sees the marketing landing there — nicer "here's what you're leaving" moment, and it
+  surfaces the new Go Marco band. (Sign-in screen on logout was a hard-coded redirect, never a route guard.)
 - **Landing page: new "Go Marco" shorthand band** (`components/landing/shorthand-band.tsx`; wired into
   `landing.tsx` right after the "one page" proof section, + a `#shorthand` nav link in `site-nav.tsx`).
   Built with the `/impeccable` skill in the brand register. Emphasises speed/efficiency: a "Format at the
