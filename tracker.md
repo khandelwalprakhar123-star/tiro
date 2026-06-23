@@ -199,6 +199,8 @@ See the 2026-06-22 changelog entry. **Not yet committed.**
       item is done; the app is live and auto-deploys on push.
 - [x] **Media embeds shipped:** images, video (local-dev), pasted-URL link cards, and **audio with a custom
       waveform player** (insert/drag/paste, play/pause/seek, 60 s cap, Backspace-delete + undo). Live on prod.
+- [x] **Go Marco shipped:** type-a-code formatting mode (merged `25d5e30`). The codes are called **marcos**
+      (canonical term — see `prd.md` §15). Not yet browser-verified.
 - [ ] **Confirm end-to-end manually:** profile avatar upload + save; doc reload-persists; folder add/remove/
       nest/restore. (Plumbing works in runtime; no formal pass recorded.)
 - [ ] **Audio follow-ups (deferred):** 0–200 % volume via Web Audio `GainNode` (§9.3); bulletproof undo via
@@ -223,7 +225,14 @@ See the 2026-06-22 changelog entry. **Not yet committed.**
 ## Changelog
 
 ### 2026-06-24
-- **"Go marco" shorthand mode built** (branch `feat/go-marco`, not yet merged). A modal formatter in
+- **Terminology decision (per owner): the shorthand codes are called "marcos".** Canonical vocabulary going
+  forward — one **marco** = one shorthand code (`h1`, `b`, `fc red`); **Go Marco** = the mode you type them
+  in; "going marco" = enabling it. Use "marco(s)" (not "shortcut"/"shorthand code") in UI copy, docs, and
+  code comments from here on. Documented as `prd.md` **§15** (added this session), which also lists every
+  shipped marco + the future-marcos shortlist. The internal identifiers (`marco`, `runMarco`, `GoMarcoIcon`,
+  `feat/go-marco`) already match this term — no code rename needed.
+- **"Go marco" shorthand mode built and merged to `main`** (`25d5e30`; branch `feat/go-marco`). A modal
+  formatter in
   `document-editor.tsx`: a toolbar toggle (using the new `GoMarcoIcon`) turns the editor into command-entry
   mode — select text, type a short code, press Enter to format. Implementation:
   - `onEditorKeyDown` intercepts at the top when `marco` is on, routing keys to `handleMarcoKey`, which

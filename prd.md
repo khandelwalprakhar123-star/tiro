@@ -45,6 +45,7 @@ We add rows/details here as we adopt them. Nothing is locked beyond what we've a
 | Documents — create/edit/delete | ✅ Done | §6 |
 | Editor — rich text (bold/italic/underline, H1–5, bullets, numbered, checklist, align) | ✅ Done | §6 |
 | Editor — fonts (per-selection family, size, **colour**) | ✅ Done | §6 |
+| Editor — Go Marco shorthand mode (type-a-code formatting; the codes are called **marcos**) | ✅ Done | §15 |
 | Media embeds — images, video, audio, pasted-link cards | ✅ Done | §6 / §9 |
 | Folders / organise (many-to-many, drag-and-drop filing, nesting) | ✅ Done | §7 |
 | Trash — restore / permanent delete | ✅ Done | §8 |
@@ -358,3 +359,38 @@ visible state. Honest framing: Tiro is described as a *multimodal text editor* (
 **Goal:** per-document header and footer content. The `documents` table already has `header` + `footer`
 jsonb columns reserved for this, but **there is no editor UI yet**. **Deferred** — not being built now;
 the reserved columns mean it stays a future, additive change whenever we pick it up.
+
+---
+
+## 15. Go Marco — shorthand formatting ✅
+
+**Terminology (canonical):** the shorthand codes are called **marcos**. One **marco** = one shorthand code
+(e.g. `h1`, `b`, `fc red`). **Go Marco** is the editor mode in which you type marcos; "going marco" =
+turning the mode on. Use this vocabulary consistently in UI copy, docs, and code comments. (The name nods
+to Tiro, Cicero's scribe and inventor of shorthand, and to the Marco→Polo call-and-response.)
+
+**Goal:** fast, keyboard-only formatting for power users. Toggle Go Marco on (toolbar button, the
+double-peak "M" `GoMarcoIcon`), select text, type a marco, press **Enter** to apply. **Esc** clears the
+current marco or, if empty, exits the mode. A bottom-centre HUD shows the marco as you type it and flashes
+**"polo"** on success.
+
+**Rules:** marcos are **case-insensitive** and matched on the **whole code** (so `b`≠`bd`, `e`≠`eweb`).
+While the mode is on, keystrokes build the marco instead of typing into the document; the text selection is
+preserved untouched until Enter applies.
+
+**The marcos (shipped):**
+
+| Group | Marcos |
+|---|---|
+| Inline marks | `b` bold · `i` italic · `u` underline |
+| Alignment | `l` left · `e` centre · `r` right |
+| Headings | `h1`–`h5` · `p` normal text |
+| Font | `f <name>` family (fuzzy-matched) · `fs<n>` set size · `+` / `-` (or `fs+` / `fs-`) nudge · `fc <colour>` colour (named or hex; bare `fc` clears) |
+| Lists | `bd` dots · `bn` numbered · `bc` checklist |
+| Insert (at caret) | `ii` image · `iv` video · `ia` audio |
+| Export / publish (whole doc) | `eweb` publish · `epdf` PDF · `emd` Markdown |
+
+**Possible future marcos (not built):** `a <url>` inline link (+`ax` unlink — currently the only way to link
+is a pasted-URL card), `s` strikethrough, `q` blockquote, `hr` rule, `x` clear formatting, `>` / `<`
+indent, `hl <colour>` highlight, and `?` to pop a cheat-sheet of all marcos. See the tracker for the
+prioritised shortlist.
