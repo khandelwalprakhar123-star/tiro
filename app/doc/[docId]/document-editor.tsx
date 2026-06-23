@@ -217,10 +217,9 @@ export function DocumentEditor({
   const [uploading, setUploading] = useState(false);
   const [exporting, setExporting] = useState(false);
 
-  // PROTOTYPE: gliding smooth caret (toggle in the bottom-right). Defaults on so
-  // it's felt immediately; resets each session while we evaluate it.
-  const [smoothCaret, setSmoothCaret] = useState(true);
-  useSmoothCaret(editorRef, smoothCaret);
+  // Gliding smooth caret — always on (see lib/use-smooth-caret.ts). Falls back
+  // to the native caret on touch devices and under prefers-reduced-motion.
+  useSmoothCaret(editorRef);
   // Publish-to-Web: current published page for this doc (drives the "live" dot
   // on the toolbar ship menu) + whether the publish dialog is open.
   const [publishState, setPublishState] = useState<PublishState | null>(
@@ -1645,28 +1644,6 @@ export function DocumentEditor({
           onClose={() => setPublishOpen(false)}
         />
       </div>
-
-      {/* PROTOTYPE toggle — flip the gliding caret on/off to feel the difference.
-          Temporary chrome; removed (or promoted to a real setting) once we decide. */}
-      <button
-        type="button"
-        // Keep focus (and the caret) in the editor when toggling — without this
-        // the button steals focus, the editor blurs, and the caret vanishes
-        // until you click back in.
-        onMouseDown={(e) => e.preventDefault()}
-        onClick={() => setSmoothCaret((v) => !v)}
-        aria-pressed={smoothCaret}
-        title="Prototype: smooth gliding caret"
-        className="fixed bottom-5 right-5 z-50 inline-flex items-center gap-2 rounded-full border border-line bg-paper/90 px-4 py-2 text-xs font-medium text-ink-soft shadow-[0_10px_30px_-15px_rgba(33,28,20,0.6)] backdrop-blur-sm transition-colors hover:text-ink"
-      >
-        <span
-          aria-hidden
-          className={`h-2 w-2 rounded-full transition-colors ${
-            smoothCaret ? "bg-yolk-deep" : "bg-ink/25"
-          }`}
-        />
-        Smooth caret: {smoothCaret ? "on" : "off"}
-      </button>
     </main>
   );
 }

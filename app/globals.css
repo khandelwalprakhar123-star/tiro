@@ -848,10 +848,8 @@ html.reveal-armed .scribble-scrub {
   position: fixed;
   top: 0;
   left: 0;
-  width: 2px;
-  height: 1em;
+  width: 1px; /* match the native caret; height is set per-line in JS */
   background: var(--ink);
-  border-radius: 1px;
   pointer-events: none;
   z-index: 60;
   opacity: 0;

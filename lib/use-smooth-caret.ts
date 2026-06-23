@@ -21,11 +21,10 @@ import { useEffect } from "react";
  */
 export function useSmoothCaret(
   editorRef: React.RefObject<HTMLDivElement | null>,
-  enabled: boolean,
 ) {
   useEffect(() => {
     const editor = editorRef.current;
-    if (!editor || !enabled) return;
+    if (!editor) return;
 
     // Respect the user's motion preference: leave the native caret alone.
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -63,25 +62,30 @@ export function useSmoothCaret(
         return null;
       }
 
+      // Caret height from the font size at the caret (a touch taller than the
+      // glyphs) — NOT the full line box, so it matches the native caret instead
+      // of looking oversized on roomy line-heights.
+      const node = range.startContainer;
+      const el =
+        node.nodeType === Node.TEXT_NODE
+          ? node.parentElement
+          : (node as HTMLElement);
+      const fontSize = el ? parseFloat(getComputedStyle(el).fontSize) : 16;
+      const h = Math.round((Number.isFinite(fontSize) ? fontSize : 16) * 1.15);
+
       const probe = range.cloneRange();
       probe.collapse(true);
       const rect = probe.getClientRects()[0] ?? probe.getBoundingClientRect();
 
-      // Empty lines / node boundaries give a zero rect — fall back to the
-      // element that holds the caret (start of its content box).
-      if (!rect || rect.height === 0) {
-        const node = range.startContainer;
-        const el =
-          node.nodeType === Node.TEXT_NODE
-            ? node.parentElement
-            : (node as HTMLElement);
-        const er = el?.getBoundingClientRect();
-        if (!er) return null;
-        const lh = el ? parseFloat(getComputedStyle(el).lineHeight) : 0;
-        const h = Number.isFinite(lh) && lh > 0 ? lh : er.height || 20;
-        return { x: er.left, y: er.top + 2, h: Math.min(h, er.height || h) };
+      // Center the caret in its line box so it sits where the text sits.
+      if (rect && rect.height > 0) {
+        return { x: rect.left, y: rect.top + (rect.height - h) / 2, h };
       }
-      return { x: rect.left, y: rect.top, h: rect.height };
+
+      // Empty line / node boundary: position at the element's content start.
+      const er = el?.getBoundingClientRect();
+      if (!er) return null;
+      return { x: er.left, y: er.top + (er.height - h) / 2, h };
     }
 
     function paint() {
@@ -151,5 +155,5 @@ export function useSmoothCaret(
       editor.classList.remove("smooth-caret-host");
       caret.remove();
     };
-  }, [editorRef, enabled]);
+  }, [editorRef]);
 }
