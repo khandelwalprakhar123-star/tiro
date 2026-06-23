@@ -1,6 +1,8 @@
+/* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
 
-/* A loose hand-drawn underline scribble (draws on under "everything"). */
+/* A loose hand-drawn underline scribble (draws on under "everything"). Pure ink
+   flourish — emphasis, the way you'd underline a word on paper. */
 function UnderlineScribble() {
   return (
     <svg
@@ -20,32 +22,13 @@ function UnderlineScribble() {
   );
 }
 
-/* Short squiggle used in the transformation panel rows. */
-function RowScribble({ delay }: { delay: string }) {
-  return (
-    <svg
-      aria-hidden
-      viewBox="0 0 130 26"
-      preserveAspectRatio="none"
-      className="h-5 w-full overflow-visible"
-    >
-      <path
-        className="scribble-path"
-        pathLength={1}
-        strokeWidth={3}
-        style={{ animationDelay: delay }}
-        d="M4 17 C 16 7, 28 23, 44 13 S 74 5, 92 17 S 116 21, 126 10"
-      />
-    </svg>
-  );
-}
-
-const XFORM_ROWS = [
-  { text: "Field notes", delay: 1.15 },
-  { text: "a voice memo", delay: 1.5 },
-  { text: "a photograph", delay: 1.85 },
-  { text: "a link, unfurled", delay: 2.2 },
+// Bar heights for the mini waveform (% of track). The first ~38% renders in
+// yolk, exactly like Tiro's real audio player.
+const MINI_WAVE = [
+  34, 56, 42, 70, 88, 60, 46, 74, 92, 66, 50, 38, 58, 80, 64, 44, 30, 52, 72,
+  86, 60, 40,
 ];
+const PLAYED = 0.38;
 
 export function Hero() {
   return (
@@ -99,9 +82,10 @@ export function Hero() {
             className="rise mt-7 max-w-md text-lg leading-relaxed text-ink-soft"
             style={{ animationDelay: "0.85s" }}
           >
-            Prose, images, audio, and video — composed in one document, then
-            published as a web page or exported to PDF. The writing tool that
-            doesn&rsquo;t make you leave to add the good stuff.
+            A text editor where the photograph, the voice memo, the video, and
+            the link live <em className="not-italic text-ink">inside</em> the
+            writing — composed on one page, then published to the web or
+            exported to PDF.
           </p>
 
           <div
@@ -121,7 +105,7 @@ export function Hero() {
               href="#document"
               className="inline-flex items-center gap-2 rounded-full border border-line px-6 py-3.5 text-sm font-medium text-ink transition-colors hover:border-ink/40"
             >
-              See how it works
+              See a real document
               <span aria-hidden>↓</span>
             </a>
           </div>
@@ -134,35 +118,86 @@ export function Hero() {
           </p>
         </div>
 
-        {/* Transformation panel — the motif, abstracted: scribble → caret → type. */}
-        <div
-          className="rise"
-          style={{ animationDelay: "0.55s" }}
-          aria-hidden
-        >
-          <figure className="relative rounded-2xl border border-line bg-paper-deep/70 p-6 shadow-[0_30px_70px_-40px_rgba(33,28,20,0.55)] backdrop-blur-sm sm:p-8">
-            <figcaption className="mb-5 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.22em] text-ink-soft">
+        {/* What Tiro actually is: prose and media interleaved on one page. An
+            abstracted mini-document — text as ink rules, media as the real
+            affordances — that assembles itself a beat after the headline. */}
+        <div className="rise" style={{ animationDelay: "0.55s" }} aria-hidden>
+          <figure className="relative rounded-2xl border border-line bg-paper-deep/70 p-6 shadow-[0_30px_70px_-40px_rgba(33,28,20,0.55)] backdrop-blur-sm sm:p-7">
+            <figcaption className="mb-6 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.22em] text-ink-soft">
               <span className="h-px w-6 bg-yolk-deep" />
-              Scribble becomes document
+              One page, every medium
             </figcaption>
 
-            <div className="flex flex-col gap-5">
-              {XFORM_ROWS.map((row) => (
-                <div key={row.text} className="xform-row">
-                  <RowScribble delay={`${row.delay}s`} />
-                  <span className="xform-caret caret-blink" />
-                  <span
-                    className="ink-in font-display text-lg text-ink sm:text-xl"
-                    style={{ animationDelay: `${row.delay + 0.35}s` }}
-                  >
-                    {row.text}
-                  </span>
+            <div className="flex flex-col gap-4">
+              {/* Heading + prose (text) */}
+              <div className="rise" style={{ animationDelay: "0.85s" }}>
+                <div className="h-2.5 w-2/5 rounded-full bg-ink/75" />
+                <div className="mt-3 flex flex-col gap-2">
+                  <div className="h-2 w-full rounded-full bg-ink/15" />
+                  <div className="h-2 w-[92%] rounded-full bg-ink/15" />
+                  <div className="h-2 w-3/4 rounded-full bg-ink/15" />
                 </div>
-              ))}
+              </div>
+
+              {/* Image */}
+              <div
+                className="rise overflow-hidden rounded-lg"
+                style={{ animationDelay: "1s" }}
+              >
+                <img
+                  src="https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=640&q=70"
+                  alt=""
+                  className="h-24 w-full object-cover"
+                />
+              </div>
+
+              {/* Audio — a real waveform shape, paused partway through */}
+              <div
+                className="rise flex items-center gap-3 rounded-lg border border-line bg-paper/70 px-3 py-2.5"
+                style={{ animationDelay: "1.12s" }}
+              >
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-ink">
+                  <span className="ml-0.5 h-0 w-0 border-y-[5px] border-l-[8px] border-y-transparent border-l-paper" />
+                </span>
+                <span className="flex h-7 flex-1 items-end gap-[2px]">
+                  {MINI_WAVE.map((h, i) => (
+                    <span
+                      key={i}
+                      className="flex-1 rounded-full"
+                      style={{
+                        height: `${h}%`,
+                        background:
+                          i / MINI_WAVE.length < PLAYED
+                            ? "var(--yolk-deep)"
+                            : "color-mix(in srgb, var(--ink) 22%, transparent)",
+                      }}
+                    />
+                  ))}
+                </span>
+                <span className="shrink-0 text-[0.7rem] tabular-nums text-ink-soft">
+                  0:36
+                </span>
+              </div>
+
+              {/* Link, unfurled */}
+              <div
+                className="rise flex items-center gap-3 rounded-lg border border-line bg-paper/70 p-2"
+                style={{ animationDelay: "1.24s" }}
+              >
+                <span className="h-9 w-9 shrink-0 rounded bg-ink/10" />
+                <span className="min-w-0">
+                  <span className="block truncate text-[0.8rem] font-medium text-ink">
+                    The making of a typeface
+                  </span>
+                  <span className="block truncate text-[0.7rem] text-ink-soft">
+                    klim.co.nz
+                  </span>
+                </span>
+              </div>
             </div>
 
-            <div className="mt-7 border-t border-line pt-5 text-sm leading-relaxed text-ink-soft">
-              One page holds the words and the media — exactly as it&rsquo;ll be
+            <div className="mt-6 border-t border-line pt-4 text-sm leading-relaxed text-ink-soft">
+              Words and media, composed together — exactly as they&rsquo;ll be
               read.
             </div>
           </figure>

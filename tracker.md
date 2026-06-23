@@ -223,6 +223,29 @@ See the 2026-06-22 changelog entry. **Not yet committed.**
 ## Changelog
 
 ### 2026-06-23
+- **Landing page de-misleading + scroll-driven SVG motion** (`/impeccable polish`, brand register). Two
+  fixes, prompted by the owner: the page implied Tiro turns scribbles into text (it doesn't — it's a
+  multimodal *text editor*), and it wanted ink animations that track scroll.
+  - **Removed the misleading "Scribble becomes document" hero panel** (`components/landing/hero.tsx`): the
+    rows where a squiggle "became" *Field notes / a voice memo / a photograph / a link* read as a
+    handwriting/speech-to-text feature Tiro has never had. Replaced with an honest, abstracted
+    mini-document — a heading + prose rules, a real image, a real audio waveform (yolk played-fraction),
+    and a link card — captioned "One page, every medium." Hero subhead rewritten to "A text editor where
+    the photograph, the voice memo, the video, and the link live *inside* the writing." Decorative ink
+    underline/swash under "everything" kept (it's emphasis, not a feature claim).
+  - **Scroll-driven ink** (`components/landing/ink-spine.tsx` + `reveal-manager.tsx` + `globals.css`): a
+    fixed marginal pen-line SVG (`.ink-spine`, desktop ≥1080px only) that draws top→bottom in proportion
+    to page scroll, and a section underline under "It all lives on **one page**" that scrubs as the
+    heading crosses the viewport. `RevealManager` now also writes `--page-progress` (on `<html>`) and
+    `--scrub` (per `[data-scrub]`) each frame via an rAF-throttled scroll handler; CSS maps them to
+    `stroke-dashoffset` (`pathLength="1"`). Verified numerically: page-progress 0→0.5→1 drives spine
+    dashoffset 0.985→0.5→0. Both gated behind `html.reveal-armed`, so no-JS / reduced-motion / crawlers
+    get the finished, visible state and no half-drawn line.
+  - **Removed orphaned CSS** (`.xform-row`, `.xform-caret`, `.caret-blink` + keyframe) left by the old
+    hero panel. `tsc --noEmit` and `eslint` clean.
+  - **PRODUCT.md:** replaced the "the scribble becomes text" design principle with "Say what it is: a
+    multimodal text editor" (no capture-to-text conversion), and clarified that ink flourishes are
+    decorative brand voice, not a feature signal.
 - **Export to Markdown.** New `lib/export-markdown.ts` exports the document as a `.md` file. Modeled on
   `lib/export-pdf.ts`: clones the editor, strips runtime-only chrome (drag handles, `.is-selected`,
   still-loading media), then walks the DOM emitting Markdown instead of jsPDF primitives — so no

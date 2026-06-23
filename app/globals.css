@@ -665,21 +665,6 @@ html.reveal-armed [data-reveal].is-visible .scribble-defer {
   animation: scribble-draw 1.1s cubic-bezier(0.5, 0, 0.1, 1) forwards;
 }
 
-/* Caret that blinks where the pen rests. */
-@keyframes caret-blink {
-  0%,
-  48% {
-    opacity: 1;
-  }
-  50%,
-  98% {
-    opacity: 0.15;
-  }
-}
-.caret-blink {
-  animation: caret-blink 1.1s steps(1, end) infinite;
-}
-
 /* "Ink-in": clean text wipes in left-to-right, as if written by the passing
    pen. The real text lives in the DOM (crawlable); this only delays its paint.
    fill-mode both + the reduced-motion reset keep it from ever shipping blank. */
@@ -724,21 +709,6 @@ html.reveal-armed [data-reveal].is-visible {
   transform: none;
 }
 
-/* Hero transformation panel: rows where a scribble (left) flows through a
-   caret into clean type (right). */
-.xform-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1.3fr);
-  align-items: center;
-  gap: 0.65rem;
-}
-.xform-caret {
-  width: 2px;
-  height: 1.4em;
-  background: var(--yolk-deep);
-  border-radius: 1px;
-}
-
 /* The browser-chrome mock used in the Publish band. */
 .browser-mock {
   border-radius: 0.85rem;
@@ -760,6 +730,77 @@ html.reveal-armed [data-reveal].is-visible {
 .link-underline:hover,
 .link-underline:focus-visible {
   background-size: 100% 2px;
+}
+
+/* ---------------------------------------------------------------------------
+   Scroll-driven ink. A single pen line traces down the page margin as you
+   scroll, and section underlines draw in proportion to how far they've
+   travelled through the viewport. Both read two CSS custom properties that the
+   <RevealManager> writes on each frame:
+     --page-progress : 0→1 across the whole document scroll
+     --scrub         : 0→1 per element, set on individual [data-scrub] nodes
+   Pure decoration: gated behind html.reveal-armed so a no-JS or reduced-motion
+   render never ships a half-drawn line. (See the reduced-motion block below —
+   the manager simply never arms, so these never appear.)
+   ------------------------------------------------------------------------- */
+
+/* The marginal pen line. Fixed to the viewport; its length tracks total scroll
+   so the leading edge sits where you are on the page. Desktop only — there's no
+   gutter to spare on narrow screens. */
+.ink-spine {
+  display: none;
+}
+/* Only on screens wide enough to leave a true gutter beside the centred
+   max-w-6xl content — otherwise the line would graze the text's left edge. */
+@media (min-width: 1280px) {
+  html.reveal-armed .ink-spine {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: clamp(0.75rem, 2.2vw, 2.5rem);
+    height: 100vh;
+    width: 2rem;
+    z-index: 5;
+    pointer-events: none;
+  }
+}
+.ink-spine svg {
+  display: block;
+  height: 100%;
+  width: 100%;
+  overflow: visible;
+}
+.ink-spine__track {
+  fill: none;
+  stroke: color-mix(in srgb, var(--ink) 8%, transparent);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+.ink-spine__line {
+  fill: none;
+  stroke: var(--yolk-deep);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  /* Drawn fraction follows scroll. Clamp keeps a faint nib visible at the very
+     top so the line never reads as "missing". */
+  stroke-dashoffset: clamp(0, calc(1 - var(--page-progress, 0)), 0.985);
+  filter: drop-shadow(0 1px 2px color-mix(in srgb, var(--yolk-deep) 35%, transparent));
+}
+
+/* Section underline that draws as it scrolls through the view, rather than all
+   at once. Same pathLength="1" trick as .scribble-path. */
+.scribble-scrub {
+  fill: none;
+  stroke: var(--yolk-deep);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0; /* drawn by default — no-JS / reduced-motion safe */
+}
+html.reveal-armed .scribble-scrub {
+  stroke-dashoffset: calc(1 - var(--scrub, 0));
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -785,10 +826,6 @@ html.reveal-armed [data-reveal].is-visible {
   .swash {
     animation: none;
     transform: none;
-  }
-  .caret-blink {
-    animation: none;
-    opacity: 1;
   }
   html.reveal-armed [data-reveal] {
     opacity: 1;
