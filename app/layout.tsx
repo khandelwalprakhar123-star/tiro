@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import {
-  Fraunces,
-  Hanken_Grotesk,
+  Young_Serif,
+  Figtree,
   Lora,
   Source_Serif_4,
   Inter,
@@ -9,15 +9,16 @@ import {
 } from "next/font/google";
 import "./globals.css";
 
-// Display serif — characterful, used for the wordmark & headings.
-const fraunces = Fraunces({
+// Display serif — warm, characterful, used for the wordmark & headings.
+// Young Serif ships a single weight (400); hierarchy comes from size, not weight.
+const youngSerif = Young_Serif({
   variable: "--font-display",
   subsets: ["latin"],
-  axes: ["opsz", "SOFT", "WONK"],
+  weight: "400",
 });
 
-// Body grotesque — clean, used for UI text and inputs.
-const hanken = Hanken_Grotesk({
+// Body sans — humanist, calm, used for UI text and inputs.
+const figtree = Figtree({
   variable: "--font-body",
   subsets: ["latin"],
 });
@@ -49,7 +50,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${fraunces.variable} ${hanken.variable} ${lora.variable} ${sourceSerif.variable} ${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
+      className={`${youngSerif.variable} ${figtree.variable} ${lora.variable} ${sourceSerif.variable} ${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { TiroMark } from "../tiro-mark";
 
 const LINKS = [
   { href: "#document", label: "The document" },
@@ -35,10 +36,13 @@ export function SiteNav() {
       <nav className="mx-auto flex max-w-6xl items-center justify-between gap-6 px-6 py-4 lg:px-10">
         <Link
           href="/"
-          className="font-display text-2xl tracking-tight text-ink"
-          style={{ fontVariationSettings: "'opsz' 80, 'SOFT' 30, 'WONK' 1" }}
+          aria-label="Tiro — home"
+          className="group flex items-center gap-2 text-ink"
         >
-          Tiro
+          <TiroMark className="h-7 w-7 text-clay transition-transform duration-300 group-hover:-rotate-3" />
+          <span className="font-display text-2xl tracking-tight">
+            Tiro<span className="text-clay">.</span>
+          </span>
         </Link>
 
         <div className="hidden items-center gap-8 md:flex">
@@ -62,7 +66,7 @@ export function SiteNav() {
           </Link>
           <Link
             href="/login"
-            className="group inline-flex items-center gap-1.5 rounded-full bg-ink px-4 py-2 text-sm font-semibold text-paper transition-colors hover:bg-yolk-deep hover:text-ink"
+            className="group inline-flex items-center gap-1.5 rounded-full bg-ink px-4 py-2 text-sm font-semibold text-paper transition-colors hover:bg-clay-deep hover:text-paper"
           >
             Start writing
             <span className="transition-transform group-hover:translate-x-0.5">

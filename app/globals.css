@@ -1,14 +1,23 @@
 @import "tailwindcss";
 
 :root {
-  /* Core palette — warm paper & ink, with the egg-yolk accent (PRD §9). */
-  --paper: #faf4e8;
-  --paper-deep: #f1e7d3;
-  --ink: #211c14;
-  --ink-soft: #6b6051;
-  --line: #e0d4bc;
-  --yolk: #ffb300;
-  --yolk-deep: #e89c00;
+  /* Core palette — warm paper & ink, with the CLAY accent (branding-clay branch).
+     NOTE: this branch repoints the existing --yolk / --yolk-deep token *values*
+     from egg-yolk to clay/terracotta so the whole app rebrands without renaming
+     86 usages. The names still read "yolk"; --clay / --clay-deep are provided as
+     correctly-named aliases for new code. See /branding for the source. */
+  --paper: #fbf7f1;
+  --paper-deep: #f1e9dc;
+  --ink: #2a2521;
+  --ink-soft: #695e53;
+  --line: #e7dccb;
+  --clay: #c8683e;
+  --clay-deep: #a8502e;
+  --sage: #8e9a78;
+
+  /* Accent tokens (legacy names, clay values) */
+  --yolk: var(--clay);
+  --yolk-deep: var(--clay-deep);
 
   --background: var(--paper);
   --foreground: var(--ink);
@@ -24,6 +33,9 @@
   --color-line: var(--line);
   --color-yolk: var(--yolk);
   --color-yolk-deep: var(--yolk-deep);
+  --color-clay: var(--clay);
+  --color-clay-deep: var(--clay-deep);
+  --color-sage: var(--sage);
 
   --font-display: var(--font-display);
   --font-body: var(--font-body);
