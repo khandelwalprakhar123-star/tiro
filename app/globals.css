@@ -1,21 +1,21 @@
 @import "tailwindcss";
 
 :root {
-  /* Core palette — warm paper & ink, with the CLAY accent (branding-clay branch).
-     NOTE: this branch repoints the existing --yolk / --yolk-deep token *values*
-     from egg-yolk to clay/terracotta so the whole app rebrands without renaming
-     86 usages. The names still read "yolk"; --clay / --clay-deep are provided as
-     correctly-named aliases for new code. See /branding for the source. */
+  /* Core palette — warm paper & ink, with a deep-YOLK accent (branding-clay branch).
+     NOTE: the --clay / --clay-deep tokens (and their --yolk aliases) now carry
+     yolk-yellow values, so the whole app rebrands from one place without renaming
+     86 usages. The token names still read "clay"/"yolk" for back-compat. The brand
+     went clay/terracotta → deep yolk per owner. See /branding for the source. */
   --paper: #fbf7f1;
   --paper-deep: #f1e9dc;
   --ink: #2a2521;
   --ink-soft: #695e53;
   --line: #e7dccb;
-  --clay: #c8683e;
-  --clay-deep: #a8502e;
+  --clay: #ffb300;       /* yolk (was clay/terracotta #c8683e) */
+  --clay-deep: #c98a00;  /* deep yolk (was brick red #a8502e, then #ffb300) */
   --sage: #8e9a78;
 
-  /* Accent tokens (legacy names, clay values) */
+  /* Accent tokens (legacy names, yolk values) */
   --yolk: var(--clay);
   --yolk-deep: var(--clay-deep);
 

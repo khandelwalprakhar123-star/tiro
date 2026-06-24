@@ -224,6 +224,25 @@ See the 2026-06-22 changelog entry. **Not yet committed.**
 
 ## Changelog
 
+### 2026-06-25
+- **`branding-clay`: accent rebranded clay → deep yolk.** Repointed the core accent tokens in
+  `app/globals.css`: `--clay` `#c8683e` (terracotta) → `#ffb300` (yolk), `--clay-deep` `#ffb300` →
+  `#c98a00` (deep yolk). All app accents read from these via the `--yolk`/`--yolk-deep` aliases, so the
+  whole app flipped from one place. Verified live at `localhost:3000`. NOTE: `/branding`
+  `brand-foundations.html` is a standalone file and still shows clay — not yet synced.
+- **`branding-clay`: D→T on the sign-in page** (`app/login/page.tsx` oversized decorative wordmark) and
+  **bigger sign-in email code** (`supabase/templates/magic_link.html` 42px→52px). The email change is NOT
+  yet live on the hosted project — needs dashboard paste or a Management-API PATCH (config push would
+  clobber prod auth: local config.toml has localhost `site_url`/redirect URLs and no Google provider block).
+- **`branding-clay`: thickened the Tiro logo mark.** The mark (`components/tiro-mark.tsx`) is a potrace
+  *filled* outline, so hairline strokes vanished at the 28px nav size. Added a same-color `stroke`
+  (`strokeWidth={280}` in path-coord space, round join/cap) around the fill so it reads boldly and scales
+  proportionally at any size. Verified live at `localhost:3000` via screenshot.
+- **`branding-clay`: repointed `--clay-deep` from brick red `#a8502e` → yolk yellow `#ffb300`** (per owner —
+  disliked the brick red). Since `--clay-deep` aliases `--yolk-deep`, this propagates app-wide to all
+  pressed/active accent uses (focus outlines, audio-waveform played portion, active borders, scribble
+  strokes). `--clay` base stays `#c8683e`. File: `app/globals.css`.
+
 ### 2026-06-24
 - **Alternate visual identity explored on branch `branding-clay` (NOT on `main`).** A from-scratch brand
   pass this session: warm/human **color + type** board and a **logo** (single-line cursive "T" vectorized

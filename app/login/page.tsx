@@ -65,7 +65,7 @@ export default function LoginPage() {
         className="pointer-events-none absolute -left-10 bottom-[-4rem] z-0 select-none font-display text-[34vw] leading-none text-ink/[0.04] lg:text-[24vw]"
         style={{ fontVariationSettings: "'opsz' 144, 'WONK' 1" }}
       >
-        D.
+        T.
       </div>
 
       <div className="relative z-10 mx-auto grid min-h-screen max-w-6xl grid-cols-1 items-center gap-12 px-6 py-12 lg:grid-cols-[1.1fr_1fr] lg:gap-20 lg:px-12">
