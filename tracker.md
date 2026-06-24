@@ -225,6 +225,17 @@ See the 2026-06-22 changelog entry. **Not yet committed.**
 ## Changelog
 
 ### 2026-06-24
+- **Alternate visual identity explored on branch `branding-clay` (NOT on `main`).** A from-scratch brand
+  pass this session: warm/human **color + type** board and a **logo** (single-line cursive "T" vectorized
+  with potrace from a hand-drawn mark) — source assets live in `/branding`. The branch then *applies* that
+  identity app-wide via central tokens: display **Fraunces → Young Serif**, body **Hanken → Figtree**, and
+  accent **egg-yolk `#ffb300` → clay `#c8683e`** (repointed the existing `--yolk`/`--yolk-deep` token values
+  so all 86 usages keep working; added correctly-named `--clay`/`--clay-deep`/`--sage`). Logo added to the
+  landing nav (`components/tiro-mark.tsx`). **Decision pending:** kept on a branch for side-by-side review
+  vs `main`'s shipped egg-yolk/Fraunces identity — merge or discard TBD by owner. NOTE: this direction
+  *conflicts with* `PRODUCT.md`'s documented egg-yolk + Fraunces identity; reconcile `PRODUCT.md`/`prd.md`
+  if merged. (`Newsreader`, used on the color/type board for reading, is on impeccable's overused-font list
+  like Fraunces — revisit before adopting it in product.)
 - **Logout now returns to the landing page, not the sign-in screen.** `app/workspace/logout-button.tsx`
   changed `router.push("/login")` → `router.push("/")`. The root is a `PUBLIC_ROUTE` (`proxy.ts`), so a
   signed-out visitor sees the marketing landing there — nicer "here's what you're leaving" moment, and it
