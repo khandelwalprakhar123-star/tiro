@@ -28,6 +28,7 @@ import {
   DEFAULT_SIZE,
 } from "@/lib/inline-style";
 import { FontColorControl } from "./font-color-control";
+import { MarcoShorthandsPanel } from "./marco-shorthands-panel";
 import {
   AudioFrameIcon,
   ChecklistIcon,
@@ -275,6 +276,8 @@ export function DocumentEditor({
   // While on, keystrokes build a command buffer (shown in the HUD) instead of
   // being typed into the doc — Enter applies, Esc clears (or exits when empty).
   const [marco, setMarco] = useState(false);
+  // Whether the right-gutter "Marco Shorthands" reference panel is expanded.
+  const [marcoPanelOpen, setMarcoPanelOpen] = useState(false);
   const [marcoBuf, setMarcoBuf] = useState("");
   const [marcoFlash, setMarcoFlash] = useState<{
     text: string;
@@ -1846,6 +1849,7 @@ export function DocumentEditor({
               marcoBufRef.current = "";
               setMarcoBuf("");
               setMarcoFlash(null);
+              setMarcoPanelOpen(false); // panel starts collapsed each time
               setMarco((m) => !m);
               editorRef.current?.focus();
             }}
@@ -1855,27 +1859,44 @@ export function DocumentEditor({
           </button>
         </div>
 
-        {/* Body — contenteditable rich text */}
+        {/* Body — contenteditable rich text. Wrapped in a relative container.
+            While marco is on (desktop), reserve a right gutter so the writing box
+            narrows and the Marco Shorthands panel docks OUTSIDE it, to its right
+            (also tightens the line measure to ~74ch — better for reading). */}
         <div
-          ref={editorRef}
-          contentEditable
-          suppressContentEditableWarning
-          role="textbox"
-          aria-multiline="true"
-          data-placeholder="Start writing…"
-          onInput={scheduleSave}
-          onPaste={onPaste}
-          onDrop={onDrop}
-          onDragOver={onDragOver}
-          onPointerDown={onEditorPointerDown}
-          onClick={onEditorClick}
-          onKeyDown={onEditorKeyDown}
-          onKeyUp={refreshActive}
-          onMouseUp={refreshActive}
-          className={`doc-content mt-6 min-h-[55vh] w-full rounded-lg text-ink transition-shadow ${
-            marco ? "shadow-[0_0_0_2px_var(--yolk)]" : ""
+          className={`relative transition-[padding] duration-200 ease-out motion-reduce:transition-none ${
+            marco ? "lg:pr-[18rem]" : ""
           }`}
-        />
+        >
+          <div
+            ref={editorRef}
+            contentEditable
+            suppressContentEditableWarning
+            role="textbox"
+            aria-multiline="true"
+            data-placeholder="Start writing…"
+            onInput={scheduleSave}
+            onPaste={onPaste}
+            onDrop={onDrop}
+            onDragOver={onDragOver}
+            onPointerDown={onEditorPointerDown}
+            onClick={onEditorClick}
+            onKeyDown={onEditorKeyDown}
+            onKeyUp={refreshActive}
+            onMouseUp={refreshActive}
+            className={`doc-content mt-6 min-h-[55vh] w-full rounded-lg text-ink transition-shadow ${
+              marco ? "shadow-[0_0_0_2px_var(--yolk)]" : ""
+            }`}
+          />
+
+          {/* Shorthand reference — only while marco is on; gutter-anchored. */}
+          {marco && (
+            <MarcoShorthandsPanel
+              open={marcoPanelOpen}
+              onToggle={() => setMarcoPanelOpen((o) => !o)}
+            />
+          )}
+        </div>
 
         {/* Contextual image-editing toolbar (floats over the selected image). */}
         {selectedFigure && (

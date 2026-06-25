@@ -237,14 +237,20 @@ See the 2026-06-22 changelog entry. **Not yet committed.**
     (`components/landing/shorthand-band.tsx`) now imports from it instead of its own local copy, so the
     landing band and the editor panel can never drift. Keep `lib/marcos.ts` in sync with `runMarco()` and
     `prd.md` §15 (now three-way: was two).
+  - **Panel sits OUTSIDE the writing box** (per owner follow-up — first cut docked it *inside* the
+    yolk-ringed editable at top-right). Mechanism: while marco is on, the body wrapper gets `lg:pr-[18rem]`
+    (animated, `transition-[padding]`), so the `w-full` `.doc-content` narrows to ~74ch and the reserved
+    18rem right gutter holds the panel — fully to the right of the box, ~2rem gap, no viewport overflow at
+    any width (vs a `fixed`/edge-pinned panel, which overlaps the box because `max-w-5xl` leaves <
+    panel-width of margin on a ~1470px screen).
   - **New `app/doc/[docId]/marco-shorthands-panel.tsx`** (client). Positioning: a `pointer-events-none`
-    full-height rail (`absolute inset-y-0 right-0 z-30`) anchored to the body's right edge, with a
-    `pointer-events-auto sticky top-24 w-[17.5rem]` card — so it stays visible while scrolling and clicks
-    pass through to the text everywhere except the card. Open/close height animates via the grid
+    full-height rail (`absolute inset-y-0 right-0 z-30`, `hidden lg:block`) anchored to the wrapper's right
+    padding edge, with a `pointer-events-auto sticky top-24 w-[16rem]` card — so it stays visible while
+    scrolling and clicks pass through everywhere except the card. Open/close height animates via the grid
     `0fr→1fr` trick (200ms, `motion-reduce:transition-none`); chevron rotates 180°.
   - **`document-editor.tsx`:** added `marcoPanelOpen` state, wrapped the contenteditable body in a
-    `relative` container, and render `<MarcoShorthandsPanel>` inside it only when `marco` is on. Imported
-    the panel.
+    `relative` container that reserves the right gutter when marco is on, and render `<MarcoShorthandsPanel>`
+    inside it only when `marco` is on. Imported the panel.
   - `tsc --noEmit` + `eslint` clean. **Not browser-verified by the agent** (the Playwright-MCP browser was
     locked by an active session) — but the dev server was live, so HMR shows it in the open editor. **Not
     yet committed/merged.** On branch `feat/marco-shorthands-panel` off `main`.

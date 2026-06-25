@@ -1,69 +1,6 @@
 import Link from "next/link";
 import { GoMarcoIcon } from "@/components/icons";
-
-/* ── Marco data ─────────────────────────────────────────────────────────────
-   Every shipped marco, grouped. `arg` renders as a ‹placeholder› inside the
-   key chip (e.g. `f ‹name›`). Keep this in sync with runMarco() in the editor
-   and prd.md §15. */
-type Marco = { code: string; arg?: string; label: string };
-const GROUPS: { name: string; items: Marco[] }[] = [
-  {
-    name: "Emphasis",
-    items: [
-      { code: "b", label: "Bold" },
-      { code: "i", label: "Italic" },
-      { code: "u", label: "Underline" },
-    ],
-  },
-  {
-    name: "Align",
-    items: [
-      { code: "l", label: "Left" },
-      { code: "e", label: "Centre" },
-      { code: "r", label: "Right" },
-    ],
-  },
-  {
-    name: "Structure",
-    items: [
-      { code: "h1–h5", label: "Heading 1–5" },
-      { code: "p", label: "Normal text" },
-    ],
-  },
-  {
-    name: "Type",
-    items: [
-      { code: "f", arg: "name", label: "Font family" },
-      { code: "fs", arg: "n", label: "Set size" },
-      { code: "+ −", label: "Bigger / smaller" },
-      { code: "fc", arg: "colour", label: "Text colour" },
-    ],
-  },
-  {
-    name: "Lists",
-    items: [
-      { code: "bd", label: "Bulleted" },
-      { code: "bn", label: "Numbered" },
-      { code: "bc", label: "Checklist" },
-    ],
-  },
-  {
-    name: "Insert",
-    items: [
-      { code: "ii", label: "Image" },
-      { code: "iv", label: "Video" },
-      { code: "ia", label: "Audio" },
-    ],
-  },
-  {
-    name: "Ship",
-    items: [
-      { code: "eweb", label: "Publish to web" },
-      { code: "epdf", label: "Export PDF" },
-      { code: "emd", label: "Export Markdown" },
-    ],
-  },
-];
+import { MARCO_GROUPS, type Marco } from "@/lib/marcos";
 
 const MONO = "var(--font-jetbrains), ui-monospace, monospace";
 
@@ -266,7 +203,7 @@ export function ShorthandBand() {
           </div>
 
           <div className="grid gap-x-12 gap-y-9 sm:grid-cols-2 lg:grid-cols-3">
-            {GROUPS.map((group, i) => (
+            {MARCO_GROUPS.map((group, i) => (
               <div
                 key={group.name}
                 data-reveal
