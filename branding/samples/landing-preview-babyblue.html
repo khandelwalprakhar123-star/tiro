@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="babyblue">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Tiro — Landing (Dark · Baby Blue preview)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@500&family=Young+Serif&display=swap" rel="stylesheet">
+<style>
+  /* ── Baby Blue · dark theme tokens (mirrors the app's token-flip) ───────── */
+  :root{
+    --paper:#15171C;        /* page surface (Char) */
+    --paper-deep:#1E2128;   /* raised panels, cards, sidebars (Surface) */
+    --surface-2:#2A2E37;    /* deep fills, dividers */
+    --ink:#E7ECF2;          /* primary text — cool soft white */
+    --ink-soft:#AEB6C2;     /* muted / secondary text (lifted for contrast) */
+    --line:rgba(231,236,242,.14);
+    --sky:#A6D2F2;          /* BABY BLUE — primary accent (marcos, links, actions) */
+    --sky-deep:#356FA4;     /* STEEL — solid fills, accent hover, emphasis */
+    --sand:#D9B894;         /* secondary / settled state */
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Figtree',system-ui,sans-serif;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  .display{font-family:'Young Serif',serif;font-weight:400;letter-spacing:-.02em;line-height:1.04}
+  .mono{font-family:'JetBrains Mono',ui-monospace,monospace}
+  a{color:inherit;text-decoration:none}
+  em{font-style:italic}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 24px}
+  @media(min-width:1024px){.wrap{padding:0 40px}}
+
+  /* ── nav ─────────────────────────────────────────────────────────────── */
+  header.nav{position:sticky;top:0;z-index:30;border-bottom:1px solid var(--line);
+    background:color-mix(in srgb,var(--paper) 85%,transparent);backdrop-filter:blur(10px)}
+  .nav-inner{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:16px 0}
+  .brand{display:flex;align-items:center;gap:8px}
+  .brand .tmark{width:26px;height:26px;display:grid;place-items:center;border-radius:7px;
+    background:color-mix(in srgb,var(--sky) 16%,transparent);color:var(--sky);
+    font-family:'Young Serif',serif;font-size:17px}
+  .brand .word{font-family:'Young Serif',serif;font-size:24px;letter-spacing:-.01em}
+  .brand .word .dot{color:var(--sky)}
+  .nav-links{display:none;gap:32px}
+  @media(min-width:768px){.nav-links{display:flex}}
+  .nav-links a{font-size:14px;font-weight:500;color:var(--ink-soft)}
+  .nav-links a:hover{color:var(--ink)}
+  .nav-right{display:flex;align-items:center;gap:14px}
+  .nav-signin{font-size:14px;font-weight:500;color:var(--ink-soft)}
+  .nav-signin:hover{color:var(--ink)}
+  .btn{display:inline-flex;align-items:center;gap:8px;border-radius:999px;font-weight:600;
+    font-size:14px;cursor:pointer;border:1px solid transparent;line-height:1}
+  .btn-primary{background:var(--ink);color:var(--paper);padding:10px 18px}
+  .btn-primary:hover{background:var(--sky-deep);color:var(--ink)}
+  .btn-ghost{border-color:var(--line);color:var(--ink);background:transparent}
+  .theme-dot{width:30px;height:30px;border-radius:999px;border:1px solid var(--line);
+    display:grid;place-items:center;color:var(--ink-soft)}
+
+  /* ── hero ────────────────────────────────────────────────────────────── */
+  .hero{position:relative;overflow:hidden}
+  .ghost-T{position:absolute;right:-6vw;top:8%;z-index:0;font-family:'Young Serif',serif;
+    font-size:26vw;line-height:1;color:rgba(231,236,242,.04);user-select:none;pointer-events:none}
+  .hero-grid{position:relative;z-index:1;display:grid;grid-template-columns:1fr;gap:56px;
+    align-items:center;padding:48px 0 80px}
+  @media(min-width:1024px){.hero-grid{grid-template-columns:1.05fr .95fr;gap:64px}}
+  h1.hero-h{font-size:clamp(2.75rem,7vw,5.25rem);font-weight:400}
+  .swash{position:relative;display:inline-block;white-space:nowrap}
+  .swash .hl{position:absolute;left:0;bottom:.07em;height:.42em;width:100%;
+    background:color-mix(in srgb,var(--sky) 55%,transparent);transform:rotate(-1deg);z-index:-1}
+  .scribble path{fill:none;stroke:var(--sky);stroke-width:4;stroke-linecap:round}
+  .lead{margin-top:28px;max-width:30rem;font-size:1.125rem;color:var(--ink-soft)}
+  .lead em{font-style:normal;color:var(--ink)}
+  .hero-cta{margin-top:36px;display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+  .btn-lg{padding:14px 28px;font-size:14px}
+  .hero-note{margin-top:20px;font-size:14px;color:var(--ink-soft)}
+
+  /* hero side document */
+  .figcard{border:1px solid var(--line);border-radius:16px;background:color-mix(in srgb,var(--paper-deep) 70%,transparent);
+    padding:26px;box-shadow:0 30px 70px -40px rgba(0,0,0,.7)}
+  .figcap{display:flex;align-items:center;gap:8px;margin-bottom:22px;font-size:11px;font-weight:600;
+    letter-spacing:.22em;text-transform:uppercase;color:var(--ink-soft)}
+  .figcap .tick{height:1px;width:24px;background:var(--sky-deep)}
+  .stack{display:flex;flex-direction:column;gap:16px}
+  .bar{border-radius:999px;height:8px}
+  .ink-bar{background:rgba(231,236,242,.16)}
+  .ink-bar.strong{height:10px;background:rgba(231,236,242,.75);width:40%}
+  .img-thumb{width:100%;height:96px;object-fit:cover;border-radius:8px;display:block}
+  .embed{display:flex;align-items:center;gap:12px;border:1px solid var(--line);
+    background:color-mix(in srgb,var(--paper) 70%,transparent);border-radius:8px;padding:10px 12px}
+  .playbtn{flex:none;width:28px;height:28px;border-radius:999px;background:var(--ink);
+    display:grid;place-items:center}
+  /* ▶ play-icon triangle: zero-size box, transparent top/bottom borders — CSS triangle, not a side-stripe */
+  .playbtn .tri{width:0;height:0;border-top:5px solid transparent;border-bottom:5px solid transparent;
+    border-left:8px solid var(--paper);margin-left:2px}
+  .wave{flex:1;display:flex;align-items:flex-end;gap:2px;height:28px}
+  .wave span{flex:1;border-radius:999px}
+  .time{flex:none;font-size:.7rem;color:var(--ink-soft);font-variant-numeric:tabular-nums}
+  .link-mini{display:flex;align-items:center;gap:12px;border:1px solid var(--line);
+    background:color-mix(in srgb,var(--paper) 70%,transparent);border-radius:8px;padding:8px}
+  .link-mini .fav{width:36px;height:36px;border-radius:6px;background:rgba(231,236,242,.1);flex:none}
+  .link-mini .lt{font-size:.8rem;font-weight:500}
+  .link-mini .ls{font-size:.7rem;color:var(--ink-soft)}
+  .figfoot{margin-top:24px;border-top:1px solid var(--line);padding-top:16px;font-size:14px;color:var(--ink-soft)}
+
+  /* ── section scaffolding ─────────────────────────────────────────────── */
+  section{position:relative}
+  .band{border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+    background:color-mix(in srgb,var(--paper-deep) 40%,transparent)}
+  .pad{padding:96px 0}
+  @media(min-width:1024px){.pad{padding:128px 0}}
+  .center{text-align:center;max-width:42rem;margin:0 auto}
+  h2.sec{font-size:clamp(2rem,4.5vw,3.25rem);font-weight:400;line-height:1.02}
+  .sec-lead{margin-top:20px;font-size:1.125rem;color:var(--ink-soft)}
+  .kicker{display:inline-flex;align-items:center;gap:8px;color:var(--ink-soft)}
+  .kicker .gm{color:var(--sky-deep);font-size:18px}
+  .kicker .gmname{font-family:'Young Serif',serif;font-size:18px;color:var(--ink)}
+
+  /* document proof sheet */
+  .sheet{max-width:46rem;margin:56px auto 0;border:1px solid var(--line);border-radius:18px;
+    background:var(--paper-deep);padding:40px 28px;box-shadow:0 40px 90px -50px rgba(0,0,0,.8)}
+  @media(min-width:640px){.sheet{padding:56px 48px}}
+  .doc h3.doc-title{font-family:'Young Serif',serif;font-weight:400;font-size:1.9rem;color:var(--ink);margin-bottom:14px}
+  .doc p{color:var(--ink-soft);margin:16px 0;max-width:62ch}
+  .doc figure{margin:24px 0}
+  .doc figure.img img{width:78%;display:block;margin:0 auto;border-radius:8px}
+  .doc figcaption{text-align:center;font-size:.85rem;color:var(--ink-soft);margin-top:8px}
+  .audio-full{display:flex;align-items:center;gap:14px;border:1px solid var(--line);
+    background:color-mix(in srgb,var(--paper) 60%,transparent);border-radius:12px;padding:14px 16px}
+  .audio-full .wave{height:40px}
+  .link-card{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:color-mix(in srgb,var(--paper) 50%,transparent)}
+  .link-card .media img{width:100%;height:170px;object-fit:cover;display:block}
+  .link-card .body{padding:14px 16px}
+  .link-card .site{font-size:.78rem;color:var(--ink-soft);display:flex;align-items:center;gap:8px}
+  .link-card .site .fav{width:16px;height:16px;border-radius:3px;background:var(--paper-deep);
+    border:1px solid var(--line);flex:none}
+  .link-card .title{font-weight:600;margin-top:4px}
+  .link-card .desc{font-size:.9rem;color:var(--ink-soft);margin-top:4px}
+
+  /* two-column band */
+  .two{display:grid;grid-template-columns:1fr;gap:56px;align-items:center}
+  @media(min-width:1024px){.two{grid-template-columns:1.05fr .95fr;gap:64px}}
+  .arrowflow{margin-top:32px;display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;
+    font-size:14px;color:var(--ink-soft)}
+  .arrowflow .ar{color:var(--sky-deep)}
+  kbd.key{display:inline-flex;align-items:center;border:1px solid var(--line);background:var(--paper-deep);
+    border-radius:6px;padding:4px 7px;font-family:'JetBrains Mono',monospace;font-size:.78rem;
+    color:var(--ink);box-shadow:0 1.5px 0 rgba(0,0,0,.35)}
+
+  /* marco demo vignette */
+  .vig{border:1px solid var(--line);border-radius:16px;background:color-mix(in srgb,var(--paper-deep) 70%,transparent);
+    padding:26px;box-shadow:0 30px 70px -40px rgba(0,0,0,.7)}
+  .vig .lbl{font-size:.7rem;color:var(--ink-soft)}
+  .sel{background:color-mix(in srgb,var(--sky) 30%,transparent);border-radius:3px;padding:2px 4px}
+  .hud{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--paper);
+    border-radius:999px;padding:8px 12px;margin-top:6px;box-shadow:0 8px 20px -12px rgba(0,0,0,.6)}
+  .hud .gmt{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--sky-deep)}
+  .hud .code{background:var(--paper-deep);border-radius:4px;padding:2px 6px;font-family:'JetBrains Mono',monospace;font-size:.85rem}
+  .vig hr{border:0;border-top:1px solid var(--line);margin:18px 0 0}
+
+  /* cheat sheet */
+  .cheat{margin-top:72px;border:1px solid var(--line);border-radius:18px;
+    background:color-mix(in srgb,var(--paper-deep) 50%,transparent);padding:36px 28px;
+    box-shadow:0 40px 90px -60px rgba(0,0,0,.8)}
+  @media(min-width:640px){.cheat{padding:48px}}
+  .cheat-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;
+    border-bottom:1px solid var(--line);padding-bottom:20px;margin-bottom:36px}
+  .cheat-cols{display:grid;grid-template-columns:1fr;gap:36px 48px}
+  @media(min-width:640px){.cheat-cols{grid-template-columns:1fr 1fr}}
+  @media(min-width:1024px){.cheat-cols{grid-template-columns:1fr 1fr 1fr}}
+  .grp h4{display:flex;align-items:center;gap:8px;font-family:'Young Serif',serif;font-weight:400;
+    font-size:1rem;color:var(--ink)}
+  .grp h4 .dash{height:1px;width:20px;background:var(--sky-deep)}
+  .grp ul{list-style:none;margin-top:14px;display:flex;flex-direction:column;gap:10px}
+  .grp li{display:flex;align-items:center;gap:12px}
+  .grp .dots{flex:1;height:1px;border-bottom:1px dotted var(--line)}
+  .grp .lab{white-space:nowrap;font-size:.875rem;color:var(--ink-soft)}
+  .grp .arg{font-style:italic;color:color-mix(in srgb,var(--ink-soft) 70%,transparent)}
+
+  /* media showcase */
+  .featured{margin-top:56px;display:grid;grid-template-columns:1fr;gap:40px;align-items:center;
+    border:1px solid var(--line);border-radius:18px;background:color-mix(in srgb,var(--paper-deep) 50%,transparent);padding:32px}
+  @media(min-width:1024px){.featured{grid-template-columns:.85fr 1.15fr;padding:48px}}
+  .demos{margin-top:32px;display:grid;grid-template-columns:1fr;gap:32px}
+  @media(min-width:768px){.demos{grid-template-columns:1fr 1fr 1fr}}
+  .demos h3{font-family:'Young Serif',serif;font-weight:400;font-size:1.25rem;margin-top:20px}
+  .demos p{font-size:.875rem;color:var(--ink-soft);margin-top:8px}
+  .video-mock{position:relative;aspect-ratio:4/3;border-radius:8px;background:var(--ink);
+    display:grid;place-items:center}
+  .video-mock .pb{width:56px;height:56px;border-radius:999px;background:color-mix(in srgb,var(--paper) 95%,transparent);
+    display:grid;place-items:center}
+  .video-mock .pb .tri{width:0;height:0;border-top:10px solid transparent;border-bottom:10px solid transparent;
+    border-left:16px solid var(--paper);margin-left:4px}
+  .video-mock .tag{position:absolute;right:12px;bottom:12px;border-radius:999px;
+    background:rgba(21,23,28,.5);padding:4px 10px;font-size:12px;font-weight:500;color:var(--paper);
+    backdrop-filter:blur(4px)}
+  .demo-img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:8px;display:block;filter:sepia(.35)}
+
+  /* publish band — the flipped LIGHT contrast break */
+  .publish{background:var(--ink);color:var(--paper)}
+  .publish .pad{padding:96px 0}
+  .publish h2{color:var(--paper)}
+  .publish .pl{color:color-mix(in srgb,var(--paper) 80%,transparent);max-width:30rem;margin-top:24px;font-size:1.125rem}
+  .publish .pl b{color:var(--paper);font-weight:600}
+  .publish .hl-line{position:relative;display:inline-block}
+  .publish .hl-line span{position:absolute;left:0;bottom:-2px;height:10px;width:100%;
+    background:color-mix(in srgb,var(--sky) 85%,transparent);transform:rotate(-1deg)}
+  .formats{margin-top:36px;display:flex;flex-wrap:wrap;gap:12px;list-style:none}
+  .formats li{border:1px solid rgba(21,23,28,.15);background:rgba(21,23,28,.05);border-radius:12px;padding:12px 16px}
+  .formats .fl{font-size:14px;font-weight:600;color:var(--paper)}
+  .formats .fs{font-size:12px;color:color-mix(in srgb,var(--paper) 65%,transparent);margin-top:2px}
+  .btn-publish{margin-top:40px;background:var(--sky-deep);color:var(--ink);padding:14px 28px;font-size:14px}
+  .btn-publish:hover{background:var(--paper);color:var(--ink)}
+  /* browser mock keeps its own dark theme surface */
+  .browser{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--paper);
+    box-shadow:0 40px 90px -50px rgba(0,0,0,.7)}
+  .browser .chrome{display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--line);
+    background:var(--paper-deep);padding:12px 16px}
+  .browser .dots{display:flex;gap:6px}
+  .browser .dots span{width:12px;height:12px;border-radius:999px;background:rgba(231,236,242,.15)}
+  .browser .url{flex:1;display:flex;align-items:center;gap:8px;border:1px solid var(--line);
+    background:var(--paper);border-radius:999px;padding:6px 12px;font-size:12px;color:var(--ink-soft)}
+  .browser .url .live{color:var(--sky-deep)}
+  .browser .url b{color:var(--ink);font-weight:600}
+  .browser article{padding:28px 24px}
+  @media(min-width:640px){.browser article{padding:36px}}
+  .browser .eyebrow{font-size:12px;font-weight:600;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-soft)}
+  .browser h3{font-family:'Young Serif',serif;font-weight:400;font-size:1.85rem;color:var(--ink);margin-top:12px}
+  .browser article p{font-size:.95rem;color:var(--ink-soft);margin-top:16px}
+  .browser article img{width:100%;aspect-ratio:16/10;object-fit:cover;border-radius:8px;margin-top:20px}
+
+  /* audience tabs — pure CSS via radio inputs */
+  .tabs input{position:absolute;opacity:0;pointer-events:none}
+  .tabstrip{display:flex;flex-wrap:wrap;gap:8px;margin-top:40px}
+  .tablabel{border:1px solid var(--line);color:var(--ink-soft);border-radius:999px;padding:10px 20px;
+    font-size:14px;font-weight:600;cursor:pointer;transition:background .15s,color .15s}
+  .tablabel:hover{color:var(--ink);border-color:color-mix(in srgb,var(--ink) 40%,transparent)}
+  .panel{display:none;margin-top:32px;border:1px solid var(--line);border-radius:18px;
+    background:color-mix(in srgb,var(--paper-deep) 50%,transparent);padding:32px;
+    grid-template-columns:1fr;gap:32px}
+  @media(min-width:1024px){.panel{grid-template-columns:1.2fr .8fr;padding:48px}}
+  .panel .line{font-family:'Young Serif',serif;font-weight:400;font-size:1.6rem;color:var(--ink);line-height:1.3}
+  @media(min-width:640px){.panel .line{font-size:1.85rem}}
+  .panel .body{margin-top:20px;color:var(--ink-soft);max-width:36rem}
+  .panel .detail{font-size:14px;font-weight:500;color:var(--ink-soft);align-self:end}
+  .panel .detail .d{display:block;height:1px;width:32px;background:var(--sky-deep);margin-bottom:8px}
+  #t-writers:checked~.tabstrip label[for=t-writers],
+  #t-students:checked~.tabstrip label[for=t-students],
+  #t-creators:checked~.tabstrip label[for=t-creators]{background:var(--ink);color:var(--paper);border-color:transparent}
+  #t-writers:checked~#p-writers,
+  #t-students:checked~#p-students,
+  #t-creators:checked~#p-creators{display:grid}
+
+  /* closing */
+  .closing{text-align:center}
+  h2.big{font-size:clamp(2.75rem,8vw,6rem);font-weight:400;line-height:.95;letter-spacing:-.025em}
+  .closing .cl-lead{margin:32px auto 0;max-width:30rem;font-size:1.125rem;color:var(--ink-soft)}
+  .closing .cl-cta{margin-top:40px;display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
+
+  /* footer */
+  footer.site{border-top:1px solid var(--line)}
+  .foot-grid{display:grid;grid-template-columns:1fr;gap:48px;padding:64px 0}
+  @media(min-width:1024px){.foot-grid{grid-template-columns:1.4fr 1fr 1fr}}
+  .foot-grid .word{font-family:'Young Serif',serif;font-size:1.85rem;color:var(--ink)}
+  .foot-blurb{margin-top:16px;font-size:14px;color:var(--ink-soft);max-width:24rem}
+  .foot-col h4{font-size:14px;font-weight:600;color:var(--ink)}
+  .foot-col ul{list-style:none;margin-top:16px;display:flex;flex-direction:column;gap:12px;font-size:14px;color:var(--ink-soft)}
+  .foot-col a:hover{color:var(--ink)}
+  .foot-bar{border-top:1px solid var(--line)}
+  .foot-bar .row{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;padding:24px 0;
+    font-size:12px;color:var(--ink-soft)}
+
+  .preview-flag{position:fixed;bottom:14px;right:14px;z-index:60;font-size:11px;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--ink-soft);background:color-mix(in srgb,var(--paper-deep) 90%,transparent);
+    border:1px solid var(--line);border-radius:999px;padding:7px 14px;backdrop-filter:blur(6px)}
+</style>
+</head>
+<body>
+
+<!-- ── NAV ─────────────────────────────────────────────────────────────── -->
+<header class="nav">
+  <div class="wrap nav-inner">
+    <a class="brand" href="#">
+      <span class="tmark">T</span>
+      <span class="word">Tiro<span class="dot">.</span></span>
+    </a>
+    <nav class="nav-links">
+      <a href="#document">The document</a>
+      <a href="#shorthand">Shorthand</a>
+      <a href="#media">Media</a>
+      <a href="#publish">Publish</a>
+    </nav>
+    <div class="nav-right">
+      <span class="theme-dot" title="Yolk / Sage / Baby Blue toggle">☾</span>
+      <a class="nav-signin" href="#">Sign in</a>
+      <a class="btn btn-primary" href="#">Start writing <span>→</span></a>
+    </div>
+  </div>
+</header>
+
+<main>
+<!-- ── HERO ────────────────────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="ghost-T" aria-hidden="true">T.</div>
+  <div class="wrap hero-grid">
+    <div>
+      <h1 class="display hero-h">
+        Write with<br>
+        <span class="swash">
+          <span class="hl" aria-hidden="true"></span>everything<svg class="scribble" viewBox="0 0 320 38" preserveAspectRatio="none" style="position:absolute;left:0;bottom:-8px;height:16px;width:100%;overflow:visible" aria-hidden="true"><path d="M5 24 C 46 11, 78 33, 116 21 S 188 9, 224 25 S 292 33, 314 17"/></svg>
+        </span>.
+      </h1>
+      <p class="lead">
+        A text editor where the photograph, the voice memo, the video, and the link
+        live <em>inside</em> the writing — composed on one page, then published to the
+        web or exported to PDF.
+      </p>
+      <div class="hero-cta">
+        <a class="btn btn-primary btn-lg" href="#">Start writing <span>→</span></a>
+        <a class="btn btn-ghost btn-lg" href="#document">See a real document <span aria-hidden="true">↓</span></a>
+      </div>
+      <p class="hero-note">Free. A code in your inbox — no password to remember.</p>
+    </div>
+
+    <!-- side mini-document -->
+    <div aria-hidden="true">
+      <figure class="figcard">
+        <figcaption class="figcap"><span class="tick"></span>One page, every medium</figcaption>
+        <div class="stack">
+          <div>
+            <div class="bar ink-bar strong"></div>
+            <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px">
+              <div class="bar ink-bar" style="width:100%"></div>
+              <div class="bar ink-bar" style="width:92%"></div>
+              <div class="bar ink-bar" style="width:75%"></div>
+            </div>
+          </div>
+          <img class="img-thumb" src="https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=640&q=70" alt="">
+          <div class="embed">
+            <span class="playbtn"><span class="tri"></span></span>
+            <span class="wave" data-played="0.38"></span>
+            <span class="time">0:36</span>
+          </div>
+          <div class="link-mini">
+            <span class="fav"></span>
+            <span>
+              <span class="lt" style="display:block">The making of a typeface</span>
+              <span class="ls" style="display:block">klim.co.nz</span>
+            </span>
+          </div>
+        </div>
+        <div class="figfoot">Words and media, composed together — exactly as they’ll be read.</div>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- ── DOCUMENT PROOF ──────────────────────────────────────────────────── -->
+<section id="document" class="band">
+  <div class="wrap pad">
+    <div class="center">
+      <h2 class="display sec">It all lives on
+        <span class="swash">one page<svg class="scribble" viewBox="0 0 220 30" preserveAspectRatio="none" style="position:absolute;left:0;bottom:-6px;height:14px;width:100%;overflow:visible" aria-hidden="true"><path d="M5 18 C 38 8, 64 24, 100 15 S 168 7, 196 21 S 214 18, 215 14"/></svg></span>.
+      </h2>
+      <p class="sec-lead">
+        Not a doc tool bolted to three other apps. The words, the photograph, the
+        recording, the link — composed together, read together. Here’s a real Tiro document:
+      </p>
+    </div>
+
+    <div class="sheet">
+      <div class="doc">
+        <h3 class="doc-title">Iceland, day three</h3>
+        <p>
+          We left the ring road just after the rain stopped and the valley turned the
+          colour of wet slate. I wanted to remember the sound of it more than the look —
+          so I did both, right here on the page.
+        </p>
+        <figure class="img">
+          <img src="https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&w=1200&q=80" alt="A still glacial lake mirroring dark mountains under a low Icelandic sky">
+          <figcaption>Þingvellir, just before the light went.</figcaption>
+        </figure>
+        <p>
+          Then the wind picked up over the water — twelve seconds of it, caught on the
+          phone and dropped straight in:
+        </p>
+        <figure>
+          <div class="audio-full">
+            <span class="playbtn"><span class="tri"></span></span>
+            <span class="wave" data-played="0.42"></span>
+            <span class="time">1:12 / 2:48</span>
+          </div>
+        </figure>
+        <p>
+          I read about the rift valley on the drive back. Paste a link and Tiro unrolls
+          it into the page — no bare blue URL sitting there:
+        </p>
+        <figure>
+          <div class="link-card">
+            <div class="media"><img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=1200&q=80" alt="Snow-streaked mountains under a bright sky"></div>
+            <div class="body">
+              <div class="site"><span class="fav"></span>visitor.is</div>
+              <div class="title">Þingvellir National Park — where two continents drift apart</div>
+              <div class="desc">The only place on earth where the Mid-Atlantic Ridge rises above sea level, and the site of the world’s oldest parliament.</div>
+            </div>
+          </div>
+        </figure>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── SHORTHAND BAND ──────────────────────────────────────────────────── -->
+<section id="shorthand">
+  <div class="wrap pad">
+    <div class="two">
+      <div>
+        <span class="kicker"><span class="gm">◑</span><span class="gmname">Go Marco</span></span>
+        <h2 class="display sec" style="margin-top:16px">Format at the speed of
+          <span class="swash">thought<svg class="scribble" viewBox="0 0 200 30" preserveAspectRatio="none" style="position:absolute;left:0;bottom:-6px;height:14px;width:100%;overflow:visible" aria-hidden="true"><path d="M5 19 C 34 9, 62 23, 98 15 S 162 8, 195 20"/></svg></span>.
+        </h2>
+        <p class="lead" style="max-width:28rem">
+          Tiro is built to keep pace with you. Turn on <span style="color:var(--ink)">Go Marco</span>,
+          select a word, and type a short code — <span style="color:var(--ink)">h1</span>,
+          <span style="color:var(--ink)">b</span>, <span style="color:var(--ink)">fc red</span> —
+          then hit return. No menus, no mouse, no reaching for the toolbar. Formatting
+          becomes muscle memory.
+        </p>
+        <div class="arrowflow">
+          <span>Select a word</span><span class="ar">→</span>
+          <span>type a marco</span><span class="ar">→</span>
+          <span>press <kbd class="key">↵</kbd></span>
+        </div>
+        <a class="btn btn-primary btn-lg" href="#" style="margin-top:36px">Write faster <span>→</span></a>
+      </div>
+
+      <!-- vignette -->
+      <div aria-hidden="true">
+        <div class="vig">
+          <div class="figcap"><span class="tick"></span>Going marco</div>
+          <p class="lbl">Select the line</p>
+          <p style="margin-top:6px;font-size:1.125rem"><span class="sel">Chapter one</span></p>
+          <p class="lbl" style="margin-top:24px">Type a marco, hit return</p>
+          <div class="hud">
+            <span style="color:var(--sky-deep)">◑</span>
+            <span class="gmt">marco</span>
+            <span class="code mono">h1</span>
+            <kbd class="key">↵</kbd>
+          </div>
+          <div style="margin-top:24px;display:flex;align-items:center;gap:12px">
+            <span style="color:var(--sky-deep)">↓</span>
+            <span style="flex:1;height:1px;background:var(--line)"></span>
+          </div>
+          <p class="display" style="margin-top:12px;font-size:1.85rem;color:var(--ink)">Chapter one</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- cheat sheet -->
+    <div class="cheat">
+      <div class="cheat-head">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="color:var(--sky-deep)">◑</span>
+          <span class="display" style="font-size:1.125rem;color:var(--ink)">Marco shorthands</span>
+        </div>
+        <span style="font-size:12px;color:var(--ink-soft)">Case-insensitive · press <kbd class="key">↵</kbd> to apply</span>
+      </div>
+      <div class="cheat-cols">
+        <div class="grp"><h4><span class="dash"></span>Emphasis</h4><ul>
+          <li><kbd class="key">b</kbd><span class="dots"></span><span class="lab">Bold</span></li>
+          <li><kbd class="key">i</kbd><span class="dots"></span><span class="lab">Italic</span></li>
+          <li><kbd class="key">u</kbd><span class="dots"></span><span class="lab">Underline</span></li>
+        </ul></div>
+        <div class="grp"><h4><span class="dash"></span>Align</h4><ul>
+          <li><kbd class="key">l</kbd><span class="dots"></span><span class="lab">Left</span></li>
+          <li><kbd class="key">e</kbd><span class="dots"></span><span class="lab">Centre</span></li>
+          <li><kbd class="key">r</kbd><span class="dots"></span><span class="lab">Right</span></li>
+        </ul></div>
+        <div class="grp"><h4><span class="dash"></span>Structure</h4><ul>
+          <li><kbd class="key">h1–h5</kbd><span class="dots"></span><span class="lab">Heading 1–5</span></li>
+          <li><kbd class="key">p</kbd><span class="dots"></span><span class="lab">Normal text</span></li>
+        </ul></div>
+        <div class="grp"><h4><span class="dash"></span>Type</h4><ul>
+          <li><kbd class="key">f&nbsp;<span class="arg">‹name›</span></kbd><span class="dots"></span><span class="lab">Font family</span></li>
+          <li><kbd class="key">fs&nbsp;<span class="arg">‹n›</span></kbd><span class="dots"></span><span class="lab">Set size</span></li>
+          <li><kbd class="key">+ −</kbd><span class="dots"></span><span class="lab">Bigger / smaller</span></li>
+          <li><kbd class="key">fc&nbsp;<span class="arg">‹colour›</span></kbd><span class="dots"></span><span class="lab">Text colour</span></li>
+        </ul></div>
+        <div class="grp"><h4><span class="dash"></span>Lists</h4><ul>
+          <li><kbd class="key">bd</kbd><span class="dots"></span><span class="lab">Bulleted</span></li>
+          <li><kbd class="key">bn</kbd><span class="dots"></span><span class="lab">Numbered</span></li>
+          <li><kbd class="key">bc</kbd><span class="dots"></span><span class="lab">Checklist</span></li>
+        </ul></div>
+        <div class="grp"><h4><span class="dash"></span>Insert</h4><ul>
+          <li><kbd class="key">ii</kbd><span class="dots"></span><span class="lab">Image</span></li>
+          <li><kbd class="key">iv</kbd><span class="dots"></span><span class="lab">Video</span></li>
+          <li><kbd class="key">ia</kbd><span class="dots"></span><span class="lab">Audio</span></li>
+        </ul></div>
+        <div class="grp"><h4><span class="dash"></span>Ship</h4><ul>
+          <li><kbd class="key">eweb</kbd><span class="dots"></span><span class="lab">Publish to web</span></li>
+          <li><kbd class="key">epdf</kbd><span class="dots"></span><span class="lab">Export PDF</span></li>
+          <li><kbd class="key">emd</kbd><span class="dots"></span><span class="lab">Export Markdown</span></li>
+        </ul></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── MEDIA SHOWCASE ──────────────────────────────────────────────────── -->
+<section id="media">
+  <div class="wrap pad">
+    <div style="max-width:42rem">
+      <h2 class="display sec">Drop in the good stuff.</h2>
+      <p class="sec-lead">
+        Most editors make media an afterthought — an attachment, a link, a stiff embed.
+        In Tiro it’s native. Each kind of media gets its own first-class treatment.
+      </p>
+    </div>
+
+    <div class="featured">
+      <div>
+        <h3 class="display" style="font-size:1.5rem;color:var(--ink)">Audio with a real waveform</h3>
+        <p style="margin-top:16px;color:var(--ink-soft)">
+          Not a grey play-bar. Tiro decodes the clip and draws its actual shape, so a
+          voice memo looks like what it sounds like — and you can scrub straight to the
+          loud part.
+        </p>
+      </div>
+      <div class="audio-full">
+        <span class="playbtn"><span class="tri"></span></span>
+        <span class="wave" data-played="0.58"></span>
+        <span class="time">0:21 / 0:36</span>
+      </div>
+    </div>
+
+    <div class="demos">
+      <div>
+        <img class="demo-img" src="https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=800&q=80" alt="Sunbeams falling through a tall forest canopy">
+        <h3>Images, art-directed</h3>
+        <p>Resize and align by dragging. Add a caption, flip it, or tint it — grayscale, sepia, contrast — without touching another app.</p>
+      </div>
+      <div>
+        <div class="video-mock">
+          <span class="pb"><span class="tri"></span></span>
+          <span class="tag">16:9 · MP4</span>
+        </div>
+        <h3>Video, no fuss</h3>
+        <p>Drop in an MP4 and it just plays — no transcoding pipeline, no plugins, no waiting on a server to bless your file.</p>
+      </div>
+      <div>
+        <div class="link-card">
+          <div class="body">
+            <div class="site"><span class="fav"></span>klim.co.nz</div>
+            <div class="title">The making of a typeface</div>
+            <div class="desc">A long read on drawing letters — pasted as a URL, served as a card.</div>
+          </div>
+        </div>
+        <h3>Links, unfurled</h3>
+        <p>Paste any URL and Tiro fetches the title, blurb, and thumbnail into a tidy card. YouTube and Vimeo become inline players.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── PUBLISH BAND (flipped light) ────────────────────────────────────── -->
+<section id="publish" class="publish">
+  <div class="wrap pad">
+    <div class="two">
+      <div>
+        <h2 class="display sec" style="font-size:clamp(2.25rem,5vw,3.75rem)">
+          Then publish it<br>
+          <span class="hl-line">to the world<span aria-hidden="true"></span></span>.
+        </h2>
+        <p class="pl">
+          One click turns your document into a public page at your own
+          <b> name.tiro.works</b> — media and all, no login for readers. Or take it with
+          you as a PDF or Markdown.
+        </p>
+        <ul class="formats">
+          <li><span class="fl">A web page</span><span class="fs">name.tiro.works</span></li>
+          <li><span class="fl">PDF</span><span class="fs">print-perfect</span></li>
+          <li><span class="fl">Markdown</span><span class="fs">portable text</span></li>
+        </ul>
+        <a class="btn btn-publish" href="#">Publish your first page <span>→</span></a>
+      </div>
+
+      <div class="browser">
+        <div class="chrome">
+          <div class="dots"><span></span><span></span><span></span></div>
+          <div class="url"><span class="live">⬤</span><b>leona</b>.tiro.works</div>
+        </div>
+        <article>
+          <p class="eyebrow">Leona Vance · Travel notes</p>
+          <h3>Iceland, day three</h3>
+          <p>We left the ring road just after the rain stopped and the valley turned the colour of wet slate…</p>
+          <img src="https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&w=1000&q=80" alt="A still glacial lake mirroring dark mountains under a low Icelandic sky">
+          <p>I wanted to remember the sound of it more than the look…</p>
+        </article>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── AUDIENCE TABS (CSS-only) ────────────────────────────────────────── -->
+<section>
+  <div class="wrap pad">
+    <h2 class="display sec" style="max-width:42rem">However you work, in one place.</h2>
+    <div class="tabs">
+      <input type="radio" name="aud" id="t-writers" checked>
+      <input type="radio" name="aud" id="t-students">
+      <input type="radio" name="aud" id="t-creators">
+      <div class="tabstrip">
+        <label class="tablabel" for="t-writers">Writers</label>
+        <label class="tablabel" for="t-students">Students</label>
+        <label class="tablabel" for="t-creators">Creators</label>
+      </div>
+
+      <div class="panel" id="p-writers">
+        <div>
+          <p class="line">Essays and newsletters that breathe.</p>
+          <p class="body">Draft long-form prose with a display-serif heading scale, drop in the reference photo and the field recording, and ship the whole thing to your own web page — no CMS, no theme wrangling.</p>
+        </div>
+        <p class="detail"><span class="d"></span>Per-selection fonts · headers &amp; footers · Markdown export</p>
+      </div>
+      <div class="panel" id="p-students">
+        <div>
+          <p class="line">Notes that hold the lecture, not just the words.</p>
+          <p class="body">Record the explanation, paste the diagram, link the source, and keep it all in one document. Organise by class with folders — the same note can live in several at once.</p>
+        </div>
+        <p class="detail"><span class="d"></span>Audio notes · checklists · many-to-many folders</p>
+      </div>
+      <div class="panel" id="p-creators">
+        <div>
+          <p class="line">Treatments and pitches that play in the page.</p>
+          <p class="body">Storyboard with images, embed the reference clip, unfurl the moodboard links, then publish a link a client can open on their phone without an account.</p>
+        </div>
+        <p class="detail"><span class="d"></span>Inline video · link unfurls · public publish</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── CLOSING CTA ─────────────────────────────────────────────────────── -->
+<section>
+  <div class="wrap pad closing">
+    <h2 class="display big">
+      <span class="swash">Start writing<svg class="scribble" viewBox="0 0 360 40" preserveAspectRatio="none" style="position:absolute;left:0;bottom:-12px;height:20px;width:100%;overflow:visible" aria-hidden="true"><path d="M6 25 C 52 12, 92 34, 132 21 S 214 9, 256 25 S 336 33, 354 16"/></svg></span>.
+    </h2>
+    <p class="cl-lead">Open a blank page and put everything on it. It’s free, and there’s no password — just a code in your inbox.</p>
+    <div class="cl-cta">
+      <a class="btn btn-primary btn-lg" href="#">Start writing <span>→</span></a>
+      <a class="btn btn-ghost btn-lg" href="#">Sign in</a>
+    </div>
+  </div>
+</section>
+</main>
+
+<!-- ── FOOTER ──────────────────────────────────────────────────────────── -->
+<footer class="site">
+  <div class="wrap foot-grid">
+    <div>
+      <span class="word">Tiro</span>
+      <p class="foot-blurb">Named for Marcus Tullius Tiro — Cicero’s scribe and the inventor of shorthand, who first turned fleeting speech into writing worth keeping.</p>
+    </div>
+    <div class="foot-col">
+      <h4>Product</h4>
+      <ul><li><a href="#document">The document</a></li><li><a href="#media">Media</a></li><li><a href="#publish">Publish &amp; export</a></li></ul>
+    </div>
+    <div class="foot-col">
+      <h4>Get started</h4>
+      <ul><li><a href="#">Start writing</a></li><li><a href="#">Sign in</a></li></ul>
+    </div>
+  </div>
+  <div class="foot-bar">
+    <div class="wrap row">
+      <p>© 2026 Tiro · tiro.works</p>
+      <p>Write with everything.</p>
+    </div>
+  </div>
+</footer>
+
+<div class="preview-flag">Tiro · Dark · Baby Blue — static preview</div>
+
+<script>
+  // Build the static waveforms (heights + sky-played split). Not animation —
+  // just paints the bars so the preview matches the real player's resting state.
+  const PEAKS = [22,38,30,54,70,48,86,62,40,58,92,74,50,34,46,66,80,58,36,28,44,72,90,64,48,30,52,68,42,26,38,60,82,70,46,32,50,64,44,30];
+  document.querySelectorAll('.wave').forEach(function(w){
+    var played = parseFloat(w.getAttribute('data-played') || '0.4');
+    var n = w.classList.contains('embed') ? 22 : 34;
+    for (var i = 0; i < PEAKS.length; i++){
+      var s = document.createElement('span');
+      s.style.height = PEAKS[i] + '%';
+      s.style.background = (i / PEAKS.length < played)
+        ? 'var(--sky-deep)'
+        : 'color-mix(in srgb, var(--ink) 22%, transparent)';
+      w.appendChild(s);
+    }
+  });
+</script>
+</body>
+</html>
