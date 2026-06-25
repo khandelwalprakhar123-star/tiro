@@ -6,6 +6,7 @@ import { createDocument } from "./actions";
 import { DocumentCard } from "./document-card";
 import { FolderCard } from "./folder-card";
 import { NewFolderButton } from "./new-folder-button";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default async function WorkspacePage() {
   const supabase = await createClient();
@@ -70,6 +71,7 @@ export default async function WorkspacePage() {
               Profile
             </Link>
             <LogoutButton />
+            <ThemeToggle />
           </div>
           <p className="inline-flex items-center gap-2 text-xs font-medium uppercase tracking-[0.3em] text-ink-soft">
             <span className="h-px w-8 bg-yolk-deep" />

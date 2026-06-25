@@ -225,6 +225,13 @@ See the 2026-06-22 changelog entry. **Not yet committed.**
 ## Changelog
 
 ### 2026-06-25
+- **`feat/theme-toggle-surfaces`: extended the Yolk/Sage theme toggle to the desk and document view.**
+  The theme system shipped landing-only; added `<ThemeToggle/>` to the desk header
+  (`app/workspace/page.tsx`, next to Logout) and the document top bar (`app/doc/[docId]/document-editor.tsx`,
+  beside the save status). Both surfaces already use the semantic tokens (`bg-paper`/`text-ink`/…), so Sage
+  applies with no other changes. Done in an isolated `git worktree` off `main` to avoid disturbing a
+  concurrent session's uncommitted work in the same tree. Verified: `tsc --noEmit` clean (0 errors);
+  toggle component already proven on landing. (Trash/Profile pages not yet covered — optional follow-up.)
 - **`feat/marco-shorthands-panel`: in-editor "Marco Shorthands" reference panel** (built with `/impeccable`,
   product register). When Go Marco is active, a collapsible panel appears pinned to the **right gutter** of
   the writing column (the empty right side, per owner screenshot) — desktop only (`lg:` and up). Collapsed

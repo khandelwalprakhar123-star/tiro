@@ -14,6 +14,7 @@ import { useSmoothCaret } from "@/lib/use-smooth-caret";
 import { exportDocumentToPdf } from "@/lib/export-pdf";
 import { exportDocumentToMarkdown } from "@/lib/export-markdown";
 import { PublishDialog } from "./publish-panel";
+import { ThemeToggle } from "@/components/theme-toggle";
 import type { PublishState } from "@/lib/publish-actions";
 import {
   FONTS,
@@ -1434,6 +1435,7 @@ export function DocumentEditor({
             ← Back to desk
           </Link>
           <div className="flex items-center gap-4">
+            <ThemeToggle />
             <span className="text-xs uppercase tracking-[0.2em] text-ink-soft">
               {save === "saving" && "Saving…"}
               {save === "saved" && "Saved ✓"}
