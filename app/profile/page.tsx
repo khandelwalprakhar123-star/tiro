@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ProfileForm } from "./profile-form";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default async function ProfilePage() {
   const supabase = await createClient();
@@ -31,9 +32,12 @@ export default async function ProfilePage() {
           >
             ← Back to desk
           </Link>
-          <p className="text-xs font-medium uppercase tracking-[0.3em] text-ink-soft">
-            Profile
-          </p>
+          <div className="flex items-center gap-3">
+            <ThemeToggle />
+            <p className="text-xs font-medium uppercase tracking-[0.3em] text-ink-soft">
+              Profile
+            </p>
+          </div>
         </header>
 
         <section className="rise mt-12" style={{ animationDelay: "0.08s" }}>

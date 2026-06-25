@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { TrashCard } from "./trash-card";
 import { EmptyTrashButton } from "./empty-trash-button";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default async function TrashPage() {
   const supabase = await createClient();
@@ -38,10 +39,13 @@ export default async function TrashPage() {
           >
             ← Back to desk
           </Link>
-          <p className="inline-flex items-center gap-2 text-xs font-medium uppercase tracking-[0.3em] text-ink-soft">
-            <span className="h-px w-8 bg-yolk-deep" />
-            Tiro
-          </p>
+          <div className="flex items-center gap-3">
+            <ThemeToggle />
+            <p className="inline-flex items-center gap-2 text-xs font-medium uppercase tracking-[0.3em] text-ink-soft">
+              <span className="h-px w-8 bg-yolk-deep" />
+              Tiro
+            </p>
+          </div>
         </header>
 
         <section className="rise mt-16" style={{ animationDelay: "0.1s" }}>

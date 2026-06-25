@@ -225,6 +225,10 @@ See the 2026-06-22 changelog entry. **Not yet committed.**
 ## Changelog
 
 ### 2026-06-25
+- **`feat/theme-toggle-trash-profile`: theme toggle now on Trash and Profile too.** Added `<ThemeToggle/>`
+  to the Trash (`app/trash/page.tsx`) and Profile (`app/profile/page.tsx`) headers, grouped with the
+  right-side label. Completes toggle coverage across all logged-in surfaces (landing, desk, document, trash,
+  profile). Semantic-token surfaces, so Sage applies unchanged. Isolated worktree; `tsc --noEmit` clean.
 - **`feat/theme-toggle-surfaces`: extended the Yolk/Sage theme toggle to the desk and document view.**
   The theme system shipped landing-only; added `<ThemeToggle/>` to the desk header
   (`app/workspace/page.tsx`, next to Logout) and the document top bar (`app/doc/[docId]/document-editor.tsx`,
