@@ -225,6 +225,22 @@ See the 2026-06-22 changelog entry. **Not yet committed.**
 ## Changelog
 
 ### 2026-06-25
+- **Dark theme renamed Sage → Innocence + repalleted to baby blue.** The dark theme is now **Innocence**
+  (cool baby-blue accent), replacing **Sage**. `data-theme="sage"` → `data-theme="innocence"` everywhere
+  (`app/globals.css` theme block + `.grain`/`.tt-sun`/`.tt-moon` selectors, `components/theme-toggle.tsx`
+  toggle logic + labels + the SVG moon recoloured `#9DAA86`→`#A6D2F2` & dark half `#1A1A1C`→`#15171C`,
+  `app/layout.tsx` no-flash script, `components/ui/dialog.tsx` comment). New Innocence token values:
+  `--paper #15171c`, `--paper-deep #1e2128`, `--ink #e7ecf2`, `--ink-soft #aeb6c2`,
+  `--line rgba(231,236,242,.14)`, `--clay`/`--yolk` (primary accent) `#a6d2f2` SKY, `--clay-deep` `#356fa4`
+  STEEL; danger tokens unchanged. **Deleted the unused `--sage` / `--color-sage` token** (it was only
+  self-referenced — no component used it). **Migration:** the no-flash script rewrites any saved
+  `tiro-theme="sage"` to `"innocence"`, so prior dark-mode users keep their dark theme. Palette source:
+  `branding/samples/brand-foundations-dark-babyblue.html`. `tsc --noEmit` clean. Toggle still Yolk ↔ (dark).
+  - **Legibility fix exposed by the lighter accent:** the marco "polo" confirmation pill
+    (`document-editor.tsx`) was `bg-yolk text-ink`; since `--ink` flips light on dark, light text on the
+    light Sky accent was ~1.2:1. Added an `.on-accent` class + `[data-theme="innocence"] .on-accent{color:var(--paper)}`
+    override so on-accent text stays dark in both themes (amber & baby-blue accents are both light). Pre-existing
+    in Sage too, just hidden by the darker green.
 - **Favicon → SVG.** Replaced the legacy `app/favicon.ico` with `app/icon.svg` (App-Router icon convention):
   the Tiro calligraphic mark in white on a black rounded tile, stroke-fattened so it reads at favicon size.
 - **Social link-preview (Open Graph / Twitter) image, site-wide.** Added `app/opengraph-image.png` +

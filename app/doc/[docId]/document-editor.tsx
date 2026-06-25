@@ -1940,7 +1940,9 @@ export function DocumentEditor({
             {marcoFlash && (
               <div
                 className={`mb-2 rounded-full px-3 py-1 text-sm font-medium shadow-[0_8px_20px_-8px_rgba(33,28,20,0.55)] ${
-                  marcoFlash.ok ? "bg-yolk text-ink" : "bg-red-600 text-white"
+                  marcoFlash.ok
+                    ? "on-accent bg-yolk text-ink"
+                    : "bg-red-600 text-white"
                 }`}
               >
                 {marcoFlash.text}

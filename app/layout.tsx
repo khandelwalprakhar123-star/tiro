@@ -78,15 +78,17 @@ export default function RootLayout({
       <head>
         {/*
           No-flash theme init. Runs synchronously during HTML parsing — before the
-          browser paints — so a Sage-theme visitor never sees a flash of Yolk. Reads
-          the saved choice from localStorage and sets data-theme on <html>. The
+          browser paints — so an Innocence-theme visitor never sees a flash of Yolk.
+          Reads the saved choice from localStorage and sets data-theme on <html>.
+          Migrates the old "sage" key to "innocence" so prior dark-mode users keep
+          their dark theme. The
           <ThemeToggle/> writes the same "tiro-theme" key. `suppressHydrationWarning`
           above lets React accept this script's DOM change instead of erroring.
           Pattern: Next.js "Preventing flash before hydration" guide.
         */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem("tiro-theme");if(t==="sage"||t==="yolk")document.documentElement.setAttribute("data-theme",t)}catch(e){}})()`,
+            __html: `(function(){try{var t=localStorage.getItem("tiro-theme");if(t==="sage"){t="innocence";localStorage.setItem("tiro-theme",t)}if(t==="innocence"||t==="yolk")document.documentElement.setAttribute("data-theme",t)}catch(e){}})()`,
           }}
         />
       </head>

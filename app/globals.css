@@ -13,7 +13,6 @@
   --line: #e7dccb;
   --clay: #ffb300;       /* yolk (was clay/terracotta #c8683e) */
   --clay-deep: #c98a00;  /* deep yolk (was brick red #a8502e, then #ffb300) */
-  --sage: #8e9a78;
 
   /* Accent tokens (legacy names, yolk values) */
   --yolk: var(--clay);
@@ -31,8 +30,8 @@
 }
 
 /* ----------------------------------------------------------------------------
-   SAGE — the dark theme. Selected via `data-theme="sage"` on <html> (set by the
-   no-flash script in app/layout.tsx and toggled by <ThemeToggle/>).
+   INNOCENCE — the dark theme. Selected via `data-theme="innocence"` on <html>
+   (set by the no-flash script in app/layout.tsx and toggled by <ThemeToggle/>).
 
    We only re-point the SAME semantic tokens the whole app already uses, so every
    `bg-paper` / `text-ink` / `text-clay` utility flips to dark automatically — no
@@ -40,22 +39,29 @@
    back-compat; their VALUES invert:
      --paper      = the dark page surface (was the cream bg)
      --ink        = the light text       (was the near-black ink)
-     --clay/yolk  = sage  (the dark theme's primary accent)
-     --sage       = deep clay (the secondary / settled-state color)
-   Derived from branding/brand-foundations-dark-sage.html.
+     --clay/yolk  = sky  (baby-blue — the dark theme's primary accent)
+     --clay-deep  = steel (deep baby-blue — accent hover / solid fills)
+   Derived from branding/samples/brand-foundations-dark-babyblue.html.
 ---------------------------------------------------------------------------- */
-[data-theme="sage"] {
-  --paper: #1a1a1c;      /* greyish-black board / page surface */
-  --paper-deep: #232326; /* raised panels, cards, sidebars */
-  --ink: #ece6dd;        /* primary text — soft warm white on dark */
-  --ink-soft: #b4ada2;   /* muted / secondary text */
-  --line: rgba(236, 230, 221, 0.14); /* hairlines, dividers, borders */
-  --clay: #9daa86;       /* SAGE — primary accent (marcos, links, actions) */
-  --clay-deep: #6f7e58;  /* DEEP SAGE — accent hover / emphasis */
-  --sage: #b0552f;       /* DEEP CLAY — secondary / settled state */
+[data-theme="innocence"] {
+  --paper: #15171c;      /* cool greyish-black board / page surface */
+  --paper-deep: #1e2128; /* raised panels, cards, sidebars */
+  --ink: #e7ecf2;        /* primary text — cool soft white on dark */
+  --ink-soft: #aeb6c2;   /* muted / secondary text */
+  --line: rgba(231, 236, 242, 0.14); /* hairlines, dividers, borders */
+  --clay: #a6d2f2;       /* SKY — baby-blue primary accent (marcos, links, actions) */
+  --clay-deep: #356fa4;  /* STEEL — deep baby-blue, accent hover / solid fills */
   --danger: #c64e34;       /* brighter brick-red so destructive pops on dark */
   --danger-deep: #ad3f29;
   --danger-ink: #fdf3ec;
+}
+
+/* On-accent text. The accent fill (--yolk) is a LIGHT colour in both themes —
+   amber in Yolk, baby-blue (Sky) in Innocence — so text sitting on it must stay
+   dark. `text-ink` is dark in Yolk but flips light in Innocence, which would be
+   illegible on Sky; re-pin on-accent text to the (dark) page surface there. */
+[data-theme="innocence"] .on-accent {
+  color: var(--paper);
 }
 
 /* A measured cross-fade when the theme flips (not a per-element reflex). */
@@ -80,7 +86,6 @@
   --color-yolk-deep: var(--yolk-deep);
   --color-clay: var(--clay);
   --color-clay-deep: var(--clay-deep);
-  --color-sage: var(--sage);
   --color-danger: var(--danger);
   --color-danger-deep: var(--danger-deep);
   --color-danger-ink: var(--danger-ink);
@@ -106,7 +111,7 @@ body {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E");
 }
 /* On dark, black grain disappears — lighten it so the surface keeps its tooth. */
-[data-theme="sage"] .grain::before {
+[data-theme="innocence"] .grain::before {
   mix-blend-mode: screen;
   opacity: 0.22;
 }
@@ -121,10 +126,10 @@ body {
 .tt-moon {
   opacity: 0.4;
 }
-[data-theme="sage"] .tt-sun {
+[data-theme="innocence"] .tt-sun {
   opacity: 0.38;
 }
-[data-theme="sage"] .tt-moon {
+[data-theme="innocence"] .tt-moon {
   opacity: 1;
 }
 

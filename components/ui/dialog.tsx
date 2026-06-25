@@ -2,7 +2,7 @@
 
 // ── Themed dialog banners ────────────────────────────────────────────────────
 // A drop-in replacement for the browser's native confirm()/prompt(), styled to
-// Tiro's paper/ink system so it adapts to both themes (Yolk light / Sage dark)
+// Tiro's paper/ink system so it adapts to both themes (Yolk light / Innocence dark)
 // for free — every colour is a semantic token (--paper, --ink, --line, --danger…).
 //
 // Shape: a banner that slides down from the top of the window (not a centred
