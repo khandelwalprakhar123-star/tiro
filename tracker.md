@@ -225,6 +225,8 @@ See the 2026-06-22 changelog entry. **Not yet committed.**
 ## Changelog
 
 ### 2026-06-25
+- **Favicon → SVG.** Replaced the legacy `app/favicon.ico` with `app/icon.svg` (App-Router icon convention):
+  the Tiro calligraphic mark in white on a black rounded tile, stroke-fattened so it reads at favicon size.
 - **Social link-preview (Open Graph / Twitter) image, site-wide.** Added `app/opengraph-image.png` +
   `app/twitter-image.png` (1200×630 @2x = 2400×1260) using the App-Router file convention — placed in the
   `app/` root segment so the preview applies to every route. Each has an `.alt.txt` sibling ("Tiro. — write
