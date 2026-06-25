@@ -38,9 +38,29 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
+  // Absolute base for resolving og:image / twitter:image URLs. Without this,
+  // link-preview image tags point at localhost and break in production.
+  metadataBase: new URL("https://tiro.works"),
   title: "Tiro — write with everything",
   description:
     "A multimodal document editor where writing, media, and publishing live in one place.",
+  // The preview card shown when a Tiro link is shared (iMessage, Slack, X, etc.).
+  // The image itself comes from the `app/opengraph-image.*` file convention —
+  // Next.js auto-adds the og:image / twitter:image tags once that file exists.
+  openGraph: {
+    title: "Tiro — write with everything",
+    description:
+      "A multimodal document editor where writing, media, and publishing live in one place.",
+    url: "https://tiro.works",
+    siteName: "Tiro",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Tiro — write with everything",
+    description:
+      "A multimodal document editor where writing, media, and publishing live in one place.",
+  },
 };
 
 export default function RootLayout({

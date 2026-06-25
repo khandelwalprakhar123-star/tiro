@@ -225,6 +225,16 @@ See the 2026-06-22 changelog entry. **Not yet committed.**
 ## Changelog
 
 ### 2026-06-25
+- **Social link-preview (Open Graph / Twitter) image, site-wide.** Added `app/opengraph-image.png` +
+  `app/twitter-image.png` (1200×630 @2x = 2400×1260) using the App-Router file convention — placed in the
+  `app/` root segment so the preview applies to every route. Each has an `.alt.txt` sibling ("Tiro. — write
+  with everything") for `og:image:alt`/`twitter:image:alt`. The image is the primary Tiro lockup card (clay
+  cursive mark + "Tiro." Young Serif wordmark on linen), re-rendered onto a proper 1.91:1 social canvas via
+  headless Chrome from `branding/logo/` markup; source render kept at `branding/logo/tiro-primary-lockup-card.png`.
+  - **`app/layout.tsx`** metadata extended: `metadataBase: new URL("https://tiro.works")` (so the auto-generated
+    `og:image`/`twitter:image` URLs are absolute in prod, not localhost), plus `openGraph` and
+    `twitter: { card: "summary_large_image" }` blocks. Next auto-emits the image tags (type/width/height/alt)
+    once the convention files exist — verified in dev HTML output.
 - **`feat/themed-dialogs`: custom themed dialog banners replace native `confirm()`/`prompt()`** (built with
   `/impeccable craft` + `frontend-design`, product register). All 8 native browser dialogs across the app
   (move-to-trash in the editor + doc cards, delete folder ×2, rename folder, new folder, empty trash,
