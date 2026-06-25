@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FolderIcon } from "@/components/icons";
+import { confirmDialog, promptDialog } from "@/components/ui/dialog";
 import {
   renameFolder,
   deleteFolder,
@@ -38,7 +39,13 @@ export function FolderCard({ folder, docCount }: Props) {
   }, [open]);
 
   async function handleRename() {
-    const name = prompt("Rename folder", folder.name);
+    const name = await promptDialog({
+      title: "Rename folder",
+      defaultValue: folder.name,
+      placeholder: "Folder name",
+      confirmLabel: "Rename",
+      icon: "folder",
+    });
     if (name == null) return; // cancelled
     setBusy(true);
     await renameFolder(folder.id, name);
@@ -48,7 +55,14 @@ export function FolderCard({ folder, docCount }: Props) {
   }
 
   async function handleDelete() {
-    if (!confirm("Delete this folder? The documents inside are kept.")) return;
+    const ok = await confirmDialog({
+      title: "Delete folder?",
+      message: "The documents inside are kept — only the folder is removed.",
+      confirmLabel: "Delete folder",
+      tone: "danger",
+      icon: "folder",
+    });
+    if (!ok) return;
     setBusy(true);
     await deleteFolder(folder.id);
     setBusy(false);

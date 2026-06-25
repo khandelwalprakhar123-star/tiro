@@ -30,6 +30,7 @@ import {
 } from "@/lib/inline-style";
 import { FontColorControl } from "./font-color-control";
 import { MarcoShorthandsPanel } from "./marco-shorthands-panel";
+import { confirmDialog } from "@/components/ui/dialog";
 import {
   AudioFrameIcon,
   ChecklistIcon,
@@ -1114,7 +1115,14 @@ export function DocumentEditor({
   }, []);
 
   async function handleDelete() {
-    if (!confirm("Move this document to trash?")) return;
+    const ok = await confirmDialog({
+      title: "Move to trash?",
+      message: "This document goes to the trash. You can restore it later.",
+      confirmLabel: "Move to trash",
+      tone: "danger",
+      icon: "trash",
+    });
+    if (!ok) return;
     setDeleting(true);
     const { error } = await supabase
       .from("documents")

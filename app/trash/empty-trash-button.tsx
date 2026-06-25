@@ -3,18 +3,21 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { emptyTrash } from "../workspace/actions";
+import { confirmDialog } from "@/components/ui/dialog";
 
 export function EmptyTrashButton() {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
 
   async function handleEmpty() {
-    if (
-      !confirm(
-        "Permanently delete everything in the trash? This cannot be undone.",
-      )
-    )
-      return;
+    const ok = await confirmDialog({
+      title: "Empty the trash?",
+      message: "Everything in the trash is deleted permanently. This can’t be undone.",
+      confirmLabel: "Empty trash",
+      tone: "danger",
+      icon: "broom",
+    });
+    if (!ok) return;
     setBusy(true);
     await emptyTrash();
     setBusy(false);

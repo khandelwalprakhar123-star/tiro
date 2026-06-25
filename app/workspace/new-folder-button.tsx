@@ -3,13 +3,20 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createFolder } from "./actions";
+import { promptDialog } from "@/components/ui/dialog";
 
 export function NewFolderButton() {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
 
   async function handleClick() {
-    const name = prompt("Folder name", "Untitled folder");
+    const name = await promptDialog({
+      title: "New folder",
+      placeholder: "Folder name",
+      defaultValue: "Untitled folder",
+      confirmLabel: "Create folder",
+      icon: "folder",
+    });
     if (name === null) return; // cancelled
     setBusy(true);
     await createFolder(name);

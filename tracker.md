@@ -225,6 +225,33 @@ See the 2026-06-22 changelog entry. **Not yet committed.**
 ## Changelog
 
 ### 2026-06-25
+- **`feat/themed-dialogs`: custom themed dialog banners replace native `confirm()`/`prompt()`** (built with
+  `/impeccable craft` + `frontend-design`, product register). All 8 native browser dialogs across the app
+  (move-to-trash in the editor + doc cards, delete folder ×2, rename folder, new folder, empty trash,
+  delete-forever) now use a single in-app component. Owner chose **top banner/toast** format (slides down
+  from the top edge, page stays live) + **theme-tuned danger red** for destructive actions.
+  - **`components/ui/dialog.tsx`** (new, client): a promise-based imperative API — `confirmDialog(opts)`
+    → `Promise<boolean>`, `promptDialog(opts)` → `Promise<string|null>` — backed by a tiny external store
+    (`useSyncExternalStore`, single in-flight request; a new request cancels the previous so no awaiter
+    hangs). One `<DialogHost/>` mounted once in `app/layout.tsx` renders the in-flight request as a
+    top-centred banner (`role=alertdialog`/`dialog`, `aria-modal`, labelled/described). The card is keyed
+    per request so a prompt seeds its input cleanly (no mirror-state-in-effect — an earlier cut tripped the
+    `react-hooks/set-state-in-effect` rule; rewrote to key + CSS-only enter animation). Focus moves into the
+    banner on open and restores to the trigger on unmount; Escape cancels, Enter submits, Tab is trapped.
+    Stroke-only medallion glyphs (trash/folder/broom/alert) match the icon set.
+  - **Theming:** every colour is a semantic token (`bg-paper`/`text-ink`/`border-line`/`bg-danger`/
+    `text-danger-ink`/`bg-yolk`), so the banner flips Yolk↔Sage automatically. Added a **`--danger` token
+    set** to `globals.css` (`:root` warm brick `#b8402b`; Sage brighter `#c64e34` to pop on dark; shared
+    near-white `--danger-ink` label) + mapped `--color-danger*` in `@theme`. Prompt accent (medallion +
+    input focus) uses `--yolk`, which is yolk-yellow in light and sage-green in dark.
+  - **Motion:** `.dialog-banner-in` keyframes (slide down + fade, 0.2s ease-out-quint) with a
+    `prefers-reduced-motion` no-animation fallback.
+  - **Call sites:** each `confirm()`/`prompt()` became one `await confirmDialog(...)` / `await
+    promptDialog(...)` with proper copy (active voice, specific labels). promptDialog requires a non-empty
+    trimmed name (disables confirm) — a small improvement over the old prompt.
+  - `tsc --noEmit` + `eslint` clean. **NOT browser-verified by the agent** (Playwright-MCP browser locked by
+    an active session) — verify via HMR in the open app + flip the theme toggle. Branch `feat/themed-dialogs`
+    off `main`.
 - **`feat/theme-toggle-trash-profile`: theme toggle now on Trash and Profile too.** Added `<ThemeToggle/>`
   to the Trash (`app/trash/page.tsx`) and Profile (`app/profile/page.tsx`) headers, grouped with the
   right-side label. Completes toggle coverage across all logged-in surfaces (landing, desk, document, trash,

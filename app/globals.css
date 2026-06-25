@@ -19,6 +19,13 @@
   --yolk: var(--clay);
   --yolk-deep: var(--clay-deep);
 
+  /* Danger — destructive actions (move-to-trash, delete). A warm brick-red that
+     sits with the paper/clay palette; --danger-ink is the (near-white) label on
+     it, stable across themes since the button stays red in both. */
+  --danger: #b8402b;
+  --danger-deep: #9c3522;
+  --danger-ink: #fdf3ec;
+
   --background: var(--paper);
   --foreground: var(--ink);
 }
@@ -46,6 +53,9 @@
   --clay: #9daa86;       /* SAGE — primary accent (marcos, links, actions) */
   --clay-deep: #6f7e58;  /* DEEP SAGE — accent hover / emphasis */
   --sage: #b0552f;       /* DEEP CLAY — secondary / settled state */
+  --danger: #c64e34;       /* brighter brick-red so destructive pops on dark */
+  --danger-deep: #ad3f29;
+  --danger-ink: #fdf3ec;
 }
 
 /* A measured cross-fade when the theme flips (not a per-element reflex). */
@@ -71,6 +81,9 @@
   --color-clay: var(--clay);
   --color-clay-deep: var(--clay-deep);
   --color-sage: var(--sage);
+  --color-danger: var(--danger);
+  --color-danger-deep: var(--danger-deep);
+  --color-danger-ink: var(--danger-ink);
 
   --font-display: var(--font-display);
   --font-body: var(--font-body);
@@ -949,5 +962,29 @@ html.reveal-armed .scribble-scrub {
   50%,
   99% {
     opacity: 0;
+  }
+}
+
+/* ----------------------------------------------------------------------------
+   DIALOG BANNERS — the themed confirm()/prompt() replacements (components/ui/
+   dialog.tsx). The banner slides down from the top edge on mount. Reduced
+   motion lands it in place immediately.
+---------------------------------------------------------------------------- */
+@keyframes dialogBannerIn {
+  from {
+    opacity: 0;
+    transform: translateY(-1rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.dialog-banner-in {
+  animation: dialogBannerIn 0.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dialog-banner-in {
+    animation: none;
   }
 }

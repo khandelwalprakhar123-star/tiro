@@ -8,6 +8,7 @@ import {
   JetBrains_Mono,
 } from "next/font/google";
 import "./globals.css";
+import { DialogHost } from "@/components/ui/dialog";
 
 // Display serif — warm, characterful, used for the wordmark & headings.
 // Young Serif ships a single weight (400); hierarchy comes from size, not weight.
@@ -69,7 +70,10 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        {children}
+        <DialogHost />
+      </body>
     </html>
   );
 }

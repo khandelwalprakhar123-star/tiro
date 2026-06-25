@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FileIcon } from "@/components/icons";
 import { formatDate } from "@/lib/format";
+import { confirmDialog } from "@/components/ui/dialog";
 import {
   addDocToFolder,
   removeDocFromFolder,
@@ -66,7 +67,14 @@ export function DocumentCard({
   }
 
   async function handleDelete() {
-    if (!confirm("Move this document to trash?")) return;
+    const ok = await confirmDialog({
+      title: "Move to trash?",
+      message: "This document goes to the trash. You can restore it later.",
+      confirmLabel: "Move to trash",
+      tone: "danger",
+      icon: "trash",
+    });
+    if (!ok) return;
     setBusy(true);
     await deleteDocument(doc.id);
     setBusy(false);

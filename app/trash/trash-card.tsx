@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { FileIcon, FolderIcon } from "@/components/icons";
 import { formatDate } from "@/lib/format";
+import { confirmDialog } from "@/components/ui/dialog";
 import {
   restoreDocument,
   purgeDocument,
@@ -30,12 +31,14 @@ export function TrashCard({ kind, item }: Props) {
 
   async function handlePurge() {
     const what = kind === "doc" ? "document" : "folder";
-    if (
-      !confirm(
-        `Permanently delete this ${what}? This cannot be undone.`,
-      )
-    )
-      return;
+    const ok = await confirmDialog({
+      title: `Delete this ${what} forever?`,
+      message: "This permanently removes it. This can’t be undone.",
+      confirmLabel: "Delete forever",
+      tone: "danger",
+      icon: "trash",
+    });
+    if (!ok) return;
     setBusy(true);
     if (kind === "doc") await purgeDocument(item.id);
     else await purgeFolder(item.id);
