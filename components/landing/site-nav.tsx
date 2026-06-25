@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { TiroMark } from "../tiro-mark";
+import { ThemeToggle } from "../theme-toggle";
 
 const LINKS = [
   { href: "#document", label: "The document" },
@@ -58,6 +59,7 @@ export function SiteNav() {
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
+          <ThemeToggle />
           <Link
             href="/login"
             className="hidden text-sm font-medium text-ink-soft transition-colors hover:text-ink sm:inline"

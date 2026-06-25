@@ -225,6 +225,51 @@ See the 2026-06-22 changelog entry. **Not yet committed.**
 ## Changelog
 
 ### 2026-06-25
+- **`feat/marco-shorthands-panel`: in-editor "Marco Shorthands" reference panel** (built with `/impeccable`,
+  product register). When Go Marco is active, a collapsible panel appears pinned to the **right gutter** of
+  the writing column (the empty right side, per owner screenshot) — desktop only (`lg:` and up). Collapsed
+  by default: a header bar (GoMarcoIcon + "Marco Shorthands" + chevron). Clicking the header expands it to
+  the full cheat sheet (every marco grouped Emphasis/Align/Structure/Type/Lists/Insert/Ship, with `<kbd>`
+  key chips + dotted-leader rows); clicking again collapses it; **exiting marco mode unmounts it**. Toggling
+  marco always re-opens collapsed (`setMarcoPanelOpen(false)` in the toolbar toggle).
+  - **Single source of truth for the marco list:** extracted the grouped data into **`lib/marcos.ts`**
+    (`MARCO_GROUPS` + `Marco` type, data-only so both server + client can import). The landing cheat sheet
+    (`components/landing/shorthand-band.tsx`) now imports from it instead of its own local copy, so the
+    landing band and the editor panel can never drift. Keep `lib/marcos.ts` in sync with `runMarco()` and
+    `prd.md` §15 (now three-way: was two).
+  - **New `app/doc/[docId]/marco-shorthands-panel.tsx`** (client). Positioning: a `pointer-events-none`
+    full-height rail (`absolute inset-y-0 right-0 z-30`) anchored to the body's right edge, with a
+    `pointer-events-auto sticky top-24 w-[17.5rem]` card — so it stays visible while scrolling and clicks
+    pass through to the text everywhere except the card. Open/close height animates via the grid
+    `0fr→1fr` trick (200ms, `motion-reduce:transition-none`); chevron rotates 180°.
+  - **`document-editor.tsx`:** added `marcoPanelOpen` state, wrapped the contenteditable body in a
+    `relative` container, and render `<MarcoShorthandsPanel>` inside it only when `marco` is on. Imported
+    the panel.
+  - `tsc --noEmit` + `eslint` clean. **Not browser-verified by the agent** (the Playwright-MCP browser was
+    locked by an active session) — but the dev server was live, so HMR shows it in the open editor. **Not
+    yet committed/merged.** On branch `feat/marco-shorthands-panel` off `main`.
+- **`feat/dark-theme-sage`: dual themes (Yolk / Sage) + a theme toggle — landing page first.**
+  Introduced a named light/dark theme system, dependency-free (no `next-themes`), following the Next.js
+  *"Preventing flash before hydration"* guide.
+  - **Names:** **Yolk** = light (default), **Sage** = dark.
+  - **Mechanism:** a single `[data-theme="sage"]` block in `app/globals.css` re-points the SAME semantic
+    tokens the whole app already uses (`--paper`→`#1a1a1c` dark surface, `--ink`→`#ece6dd` light text,
+    `--clay`/`--yolk`→`#9daa86` sage accent, `--clay-deep`→`#6f7e58`, `--sage`→`#b0552f` deep clay). Every
+    `bg-paper`/`text-ink`/`text-clay` utility flips automatically — **no markup, font, or size changes**.
+    Palette derived from `branding/brand-foundations-dark-sage.html`. Also: light grain override on dark
+    (`mix-blend screen`), and a 0.25s body cross-fade (reduced-motion-guarded).
+  - **No-flash:** `app/layout.tsx` now has `data-theme="yolk"` + `suppressHydrationWarning` on `<html>` and
+    an inline `<head>` script that reads `localStorage["tiro-theme"]` before first paint.
+  - **Toggle:** new `components/theme-toggle.tsx` — a minimal rounded-rectangle SVG (light half + yolk Sun,
+    `\` seam, dark half + sage Moon). Render-stateless: active-half highlight is driven by `html[data-theme]`
+    via `.tt-sun`/`.tt-moon` CSS (no React state → no hydration mismatch); reads live theme at click-time and
+    flips + persists. Wired into `components/landing/site-nav.tsx`.
+  - **Verified** live at `localhost:3000`: light `body` bg `rgb(251,247,241)`, sage `rgb(26,26,28)`; toggle
+    flips `yolk↔sage`; saved theme applies on hard reload with no flash.
+  - **Pending:** add `<ThemeToggle/>` to the desk (`/workspace`) and documents/folders surfaces (light theme
+    untouched there for now). Branch not yet merged to `main`.
+  - **Branding housekeeping:** Wine + warm-brown dark drafts moved to `branding/samples/`; Sage is the
+    canonical dark brandbook (`branding/brand-foundations-dark-sage.html`).
 - **`branding-clay`: accent rebranded clay → deep yolk.** Repointed the core accent tokens in
   `app/globals.css`: `--clay` `#c8683e` (terracotta) → `#ffb300` (yolk), `--clay-deep` `#ffb300` →
   `#c98a00` (deep yolk). All app accents read from these via the `--yolk`/`--yolk-deep` aliases, so the

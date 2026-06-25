@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Tiro — Brand Foundations (Dark · Sage)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;1,6..72,400&family=Young+Serif&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --char:#1A1A1C;        /* board / primary dark surface (greyish black) */
+    --surface:#232326;     /* raised panels & cards */
+    --surface-2:#2E2E32;   /* deep fills, borders, dividers */
+    --paper:#ECE6DD;       /* primary text / soft warm white on dark */
+    --stone:#9A958F;       /* muted labels, captions */
+    --clay:#9DAA86;        /* SAGE — primary accent on dark · marcos */
+    --clay-deep:#6F7E58;   /* DEEP SAGE — emphasis, links, hover */
+    --sage:#B0552F;        /* DEEP CLAY — secondary · settled state */
+    --line:rgba(236,230,221,.12);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:#0F0F10;}
+  .board{
+    width:1480px;
+    margin:0 auto;
+    background:var(--char);
+    color:var(--paper);
+    padding:84px 96px 76px;
+    font-family:'Figtree',system-ui,sans-serif;
+  }
+
+  /* ---- masthead ---- */
+  .top{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:1px solid var(--line);padding-bottom:30px;}
+  .mark{font-family:'Young Serif',serif;font-weight:500;font-size:46px;letter-spacing:-.02em;color:var(--paper);}
+  .mark .dot{color:var(--clay);}
+  .crumb{font-size:12.5px;letter-spacing:.28em;text-transform:uppercase;color:var(--stone);}
+  .top .right{text-align:right}
+  .top .right .v{font-family:'Young Serif',serif;font-size:18px;color:var(--paper);}
+
+  .lead{margin:34px 0 64px;max-width:760px;}
+  .lead h1{font-family:'Newsreader',serif;font-weight:300;font-size:33px;line-height:1.32;letter-spacing:-.01em;color:var(--paper);}
+  .lead h1 em{font-style:italic;color:var(--clay);}
+
+  .sect-label{font-size:12px;letter-spacing:.26em;text-transform:uppercase;color:var(--stone);display:flex;align-items:center;gap:14px;margin-bottom:26px;}
+  .sect-label::after{content:"";height:1px;flex:1;background:var(--line);}
+  .sect-label .num{font-family:'Young Serif',serif;letter-spacing:0;font-size:13px;color:var(--clay);}
+
+  /* ---- color ---- */
+  .swatches{display:grid;grid-template-columns:repeat(4,1fr);gap:22px;margin-bottom:30px;}
+  .sw{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--surface);}
+  .sw .chip{height:148px;display:flex;align-items:flex-end;padding:16px;}
+  .sw .meta{padding:15px 17px 18px;}
+  .sw .nm{font-weight:600;font-size:15px;color:var(--paper);}
+  .sw .hex{font-size:13px;color:var(--stone);letter-spacing:.04em;margin-top:3px;font-variant-numeric:tabular-nums;}
+  .sw .role{font-size:12px;color:var(--stone);margin-top:9px;line-height:1.4;}
+  .on-dark{color:#ECE6DD}.on-light{color:#1A1A1C}
+  .accentrow{display:grid;grid-template-columns:2fr 1fr;gap:22px;}
+  .ratio{border:1px solid var(--line);border-radius:14px;padding:24px 26px;display:flex;flex-direction:column;justify-content:center;gap:14px;background:var(--surface);}
+  .ratio .bar{display:flex;height:54px;border-radius:8px;overflow:hidden}
+  .ratio .bar span{display:block}
+  .ratio small{font-size:12px;color:var(--stone);letter-spacing:.04em}
+
+  /* ---- type ---- */
+  .type-grid{display:grid;grid-template-columns:1fr 1fr;gap:30px;}
+  .spec{border:1px solid var(--line);border-radius:14px;padding:30px 32px;background:var(--surface);}
+  .spec .tag{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:18px;}
+  .spec .tag .role{font-size:11.5px;letter-spacing:.24em;text-transform:uppercase;color:var(--stone)}
+  .spec .tag .fam{font-family:'Figtree';font-weight:600;font-size:14px}
+  .glyphs{font-size:30px;letter-spacing:.01em;color:var(--paper);line-height:1.1}
+  .young{font-family:'Young Serif',serif}
+  .newsreader{font-family:'Newsreader',serif}
+  .figtree{font-family:'Figtree',sans-serif}
+  .big-fr{font-family:'Young Serif',serif;font-weight:400;font-size:72px;line-height:.98;letter-spacing:-.02em;margin:6px 0 14px;color:var(--paper)}
+  .big-fr em{font-style:normal;color:var(--clay)}
+  .read{font-family:'Newsreader',serif;font-weight:300;font-size:19px;line-height:1.62;color:#CFC8BE;max-width:46ch}
+  .read .marco{color:var(--clay);font-weight:400;}
+  .uirow{display:flex;gap:10px;flex-wrap:wrap;margin-top:4px}
+  .pill{font-family:'Figtree';font-weight:500;font-size:13px;padding:8px 14px;border-radius:999px;border:1px solid var(--line);color:var(--paper)}
+  .pill.solid{background:var(--clay);color:#1A1A1C;border-color:transparent}
+  .pill.sage{background:rgba(176,85,47,.22);border-color:transparent;color:#E3A07C}
+
+  /* scale */
+  .scale{grid-column:1 / -1;border:1px solid var(--line);border-radius:14px;padding:28px 32px;background:var(--surface);}
+  .scale .row{display:flex;align-items:baseline;gap:22px;padding:11px 0;border-bottom:1px dashed var(--line)}
+  .scale .row:last-child{border-bottom:0}
+  .scale .row .lbl{width:150px;flex:none;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--stone)}
+  .scale .row .px{width:62px;flex:none;font-size:13px;color:var(--clay);font-variant-numeric:tabular-nums}
+  .scale .row .samp{font-family:'Young Serif',serif;color:var(--paper);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  .foot{display:flex;justify-content:space-between;margin-top:54px;padding-top:24px;border-top:1px solid var(--line);font-size:12px;letter-spacing:.06em;color:var(--stone)}
+  .gap{height:60px}
+</style>
+</head>
+<body>
+  <div class="board">
+    <div class="top">
+      <div>
+        <div class="crumb">Brand Foundations</div>
+        <div class="mark" style="margin-top:10px">Tiro<span class="dot">.</span></div>
+      </div>
+      <div class="right">
+        <div class="crumb">Color &amp; Type · Dark</div>
+        <div class="v">Sage — sample C</div>
+      </div>
+    </div>
+
+    <div class="lead">
+      <h1>A calm place to write. Tiro turns quick <em>marco</em> shorthands into finished words — so the page keeps up with the thought.</h1>
+    </div>
+
+    <!-- COLOR -->
+    <div class="sect-label"><span class="num">01</span> Color System — Dark · Sage</div>
+    <div class="swatches">
+      <div class="sw">
+        <div class="chip" style="background:var(--char)"><span class="on-dark figtree" style="font-weight:600">Aa</span></div>
+        <div class="meta"><div class="nm">Char</div><div class="hex">#1A1A1C</div><div class="role">Primary dark surface</div></div>
+      </div>
+      <div class="sw">
+        <div class="chip" style="background:var(--surface)"><span class="on-dark figtree" style="font-weight:600">Aa</span></div>
+        <div class="meta"><div class="nm">Surface</div><div class="hex">#232326</div><div class="role">Panels, sidebars, cards</div></div>
+      </div>
+      <div class="sw">
+        <div class="chip" style="background:var(--paper)"><span class="on-light figtree" style="font-weight:600">Aa</span></div>
+        <div class="meta"><div class="nm">Paper</div><div class="hex">#ECE6DD</div><div class="role">Primary text on dark</div></div>
+      </div>
+      <div class="sw">
+        <div class="chip" style="background:var(--stone)"><span class="on-light figtree" style="font-weight:600">Aa</span></div>
+        <div class="meta"><div class="nm">Stone</div><div class="hex">#9A958F</div><div class="role">Muted labels, captions</div></div>
+      </div>
+      <div class="sw">
+        <div class="chip" style="background:var(--clay)"><span class="on-light figtree" style="font-weight:600">Aa</span></div>
+        <div class="meta"><div class="nm">Sage</div><div class="hex">#9DAA86</div><div class="role">Primary accent · marcos</div></div>
+      </div>
+      <div class="sw">
+        <div class="chip" style="background:var(--clay-deep)"><span class="on-dark figtree" style="font-weight:600">Aa</span></div>
+        <div class="meta"><div class="nm">Deep Sage</div><div class="hex">#6F7E58</div><div class="role">Emphasis · links, hover</div></div>
+      </div>
+      <div class="sw">
+        <div class="chip" style="background:var(--sage)"><span class="on-dark figtree" style="font-weight:600">Aa</span></div>
+        <div class="meta"><div class="nm">Deep Clay</div><div class="hex">#B0552F</div><div class="role">Secondary · settled state</div></div>
+      </div>
+      <div class="sw">
+        <div class="chip" style="background:var(--surface-2)"><span class="on-dark figtree" style="font-weight:600">Aa</span></div>
+        <div class="meta"><div class="nm">Surface Deep</div><div class="hex">#2E2E32</div><div class="role">Borders, dividers, fills</div></div>
+      </div>
+    </div>
+    <div class="accentrow">
+      <div class="ratio">
+        <small>SYSTEM BALANCE — greyish darks carry the page; sage lifts only where it earns attention.</small>
+        <div class="bar">
+          <span style="background:var(--char);flex:56"></span>
+          <span style="background:var(--surface);flex:22"></span>
+          <span style="background:var(--paper);flex:12"></span>
+          <span style="background:var(--clay);flex:7"></span>
+          <span style="background:var(--sage);flex:3"></span>
+        </div>
+        <small>56% Char &nbsp;·&nbsp; 22% Surface &nbsp;·&nbsp; 12% Paper &nbsp;·&nbsp; 7% Sage &nbsp;·&nbsp; 3% Deep Clay</small>
+      </div>
+      <div class="ratio">
+        <small>ACCENT IN USE</small>
+        <div class="uirow">
+          <span class="pill solid">Run marco</span>
+          <span class="pill">Draft</span>
+          <span class="pill sage">Saved</span>
+        </div>
+        <small style="margin-top:4px">Sage = action. Deep clay = settled state.</small>
+      </div>
+    </div>
+
+    <div class="gap"></div>
+
+    <!-- TYPE -->
+    <div class="sect-label"><span class="num">02</span> Typography</div>
+    <div class="type-grid">
+      <div class="spec">
+        <div class="tag"><span class="role">Display Serif</span><span class="fam young" style="color:var(--clay)">Young Serif</span></div>
+        <div class="big-fr">Write <em>freely.</em></div>
+        <div class="glyphs young">AaBbGg &nbsp; 0123 &nbsp; &amp;?</div>
+      </div>
+      <div class="spec">
+        <div class="tag"><span class="role">Reading Serif</span><span class="fam newsreader" style="color:var(--clay)">Newsreader</span></div>
+        <div class="read">Tiro was Cicero's scribe — the mind behind the first <span class="marco">shorthand</span>. Two thousand years on, the idea holds: type less, mean more.</div>
+        <div class="glyphs newsreader" style="font-size:22px;margin-top:16px">AaBbGg 0123 &amp;?</div>
+      </div>
+      <div class="spec" style="grid-column:1 / -1;display:flex;justify-content:space-between;align-items:center;gap:40px">
+        <div style="flex:1">
+          <div class="tag"><span class="role">Interface Sans</span><span class="fam figtree" style="color:var(--clay)">Figtree</span></div>
+          <div class="glyphs figtree" style="font-size:26px;margin-top:6px">The quick fox · Menus, labels, buttons · 0123456789</div>
+        </div>
+        <div class="uirow" style="flex:none">
+          <span class="pill solid">Primary</span>
+          <span class="pill">Secondary</span>
+          <span class="pill sage">Ghost</span>
+        </div>
+      </div>
+
+      <div class="scale">
+        <div class="tag" style="margin-bottom:8px"><span class="role">Type Scale — 1.25 ratio</span><span class="fam" style="color:var(--stone)">Young Serif · Newsreader · Figtree</span></div>
+        <div class="row"><span class="lbl">Display</span><span class="px">64px</span><span class="samp" style="font-size:40px;font-weight:400">A calm place to write</span></div>
+        <div class="row"><span class="lbl">Heading 1</span><span class="px">36px</span><span class="samp" style="font-size:30px;font-weight:500">Every marco, spelled out</span></div>
+        <div class="row"><span class="lbl">Heading 2</span><span class="px">28px</span><span class="samp" style="font-size:25px;font-weight:500">Shorthand, expanded</span></div>
+        <div class="row"><span class="lbl">Body — Reading</span><span class="px">18px</span><span class="samp newsreader" style="font-size:19px;font-weight:300">The page keeps up with the thought.</span></div>
+        <div class="row"><span class="lbl">UI / Label</span><span class="px">14px</span><span class="samp figtree" style="font-size:15px;font-weight:500;letter-spacing:.01em">Documents · Settings · Share</span></div>
+        <div class="row"><span class="lbl">Caption</span><span class="px">13px</span><span class="samp figtree" style="font-size:13px;font-weight:500;letter-spacing:.16em;text-transform:uppercase;color:var(--stone)">Saved just now</span></div>
+      </div>
+    </div>
+
+    <div class="foot">
+      <span>TIRO — BRAND FOUNDATIONS</span>
+      <span>COLOR &amp; TYPE · DARK · SAGE</span>
+      <span>01 / 01</span>
+    </div>
+  </div>
+</body>
+</html>

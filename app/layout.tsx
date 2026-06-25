@@ -50,8 +50,25 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      data-theme="yolk"
+      suppressHydrationWarning
       className={`${youngSerif.variable} ${figtree.variable} ${lora.variable} ${sourceSerif.variable} ${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
+      <head>
+        {/*
+          No-flash theme init. Runs synchronously during HTML parsing — before the
+          browser paints — so a Sage-theme visitor never sees a flash of Yolk. Reads
+          the saved choice from localStorage and sets data-theme on <html>. The
+          <ThemeToggle/> writes the same "tiro-theme" key. `suppressHydrationWarning`
+          above lets React accept this script's DOM change instead of erroring.
+          Pattern: Next.js "Preventing flash before hydration" guide.
+        */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem("tiro-theme");if(t==="sage"||t==="yolk")document.documentElement.setAttribute("data-theme",t)}catch(e){}})()`,
+          }}
+        />
+      </head>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );

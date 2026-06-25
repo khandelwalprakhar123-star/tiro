@@ -23,6 +23,41 @@
   --foreground: var(--ink);
 }
 
+/* ----------------------------------------------------------------------------
+   SAGE — the dark theme. Selected via `data-theme="sage"` on <html> (set by the
+   no-flash script in app/layout.tsx and toggled by <ThemeToggle/>).
+
+   We only re-point the SAME semantic tokens the whole app already uses, so every
+   `bg-paper` / `text-ink` / `text-clay` utility flips to dark automatically — no
+   markup, font, or size changes anywhere. The token NAMES stay light-themed for
+   back-compat; their VALUES invert:
+     --paper      = the dark page surface (was the cream bg)
+     --ink        = the light text       (was the near-black ink)
+     --clay/yolk  = sage  (the dark theme's primary accent)
+     --sage       = deep clay (the secondary / settled-state color)
+   Derived from branding/brand-foundations-dark-sage.html.
+---------------------------------------------------------------------------- */
+[data-theme="sage"] {
+  --paper: #1a1a1c;      /* greyish-black board / page surface */
+  --paper-deep: #232326; /* raised panels, cards, sidebars */
+  --ink: #ece6dd;        /* primary text — soft warm white on dark */
+  --ink-soft: #b4ada2;   /* muted / secondary text */
+  --line: rgba(236, 230, 221, 0.14); /* hairlines, dividers, borders */
+  --clay: #9daa86;       /* SAGE — primary accent (marcos, links, actions) */
+  --clay-deep: #6f7e58;  /* DEEP SAGE — accent hover / emphasis */
+  --sage: #b0552f;       /* DEEP CLAY — secondary / settled state */
+}
+
+/* A measured cross-fade when the theme flips (not a per-element reflex). */
+@media (prefers-reduced-motion: no-preference) {
+  body,
+  .grain::before {
+    transition:
+      background-color 0.25s ease,
+      color 0.25s ease;
+  }
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -56,6 +91,28 @@ body {
   pointer-events: none;
   opacity: 0.5;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E");
+}
+/* On dark, black grain disappears — lighten it so the surface keeps its tooth. */
+[data-theme="sage"] .grain::before {
+  mix-blend-mode: screen;
+  opacity: 0.22;
+}
+
+/* ThemeToggle: the active theme's icon shows full-strength, the other dims.
+   Driven by the data-theme attribute so the button markup stays identical on
+   server and client (no hydration flash). Yolk (light) is the default. */
+.tt-sun,
+.tt-moon {
+  transition: opacity 0.2s ease;
+}
+.tt-moon {
+  opacity: 0.4;
+}
+[data-theme="sage"] .tt-sun {
+  opacity: 0.38;
+}
+[data-theme="sage"] .tt-moon {
+  opacity: 1;
 }
 
 /* Staggered entrance — one orchestrated page-load reveal. */
