@@ -224,6 +224,21 @@ See the 2026-06-22 changelog entry. **Not yet committed.**
 
 ## Changelog
 
+### 2026-06-28
+- **Document outline / heading sidebar** (left gutter). New client component
+  `app/doc/[docId]/outline-panel.tsx` (`<OutlinePanel/>`), mirroring the Marco panel's card styling and
+  theme tokens. Lists every `h1`–`h5` in the contenteditable, indented by level; click scrolls to the
+  heading (offset so the sticky toolbar doesn't cover it); the heading currently in view is highlighted.
+  Reads headings straight off the live editor via a `MutationObserver` (rAF-coalesced re-scan on edits),
+  so the parent only owns an `outlineOpen` flag — no document state threaded through.
+  - **Layout decision (per owner):** the page must NOT shift. Panel is `position: fixed` in the left
+    gutter (`hidden lg:flex`, desktop-only where a gutter exists), so the centred `max-w-5xl` column is
+    untouched. Closed state is a floating round `≡` button outside the page; open state is the outline
+    card in the same spot. Distinct from Marco mode, which *reserves* a right gutter via `lg:pr-[18rem]`.
+  - Wired into `document-editor.tsx`: import, `outlineOpen` state, `<OutlinePanel editorRef … />` render
+    after the editor body. `tsc --noEmit` + eslint clean. Pre-existing `broken-image:58` design finding is
+    unrelated to this change.
+
 ### 2026-06-25
 - **Dark theme renamed Sage → Innocence + repalleted to baby blue.** The dark theme is now **Innocence**
   (cool baby-blue accent), replacing **Sage**. `data-theme="sage"` → `data-theme="innocence"` everywhere

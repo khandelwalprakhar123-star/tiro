@@ -30,6 +30,7 @@ import {
 } from "@/lib/inline-style";
 import { FontColorControl } from "./font-color-control";
 import { MarcoShorthandsPanel } from "./marco-shorthands-panel";
+import { OutlinePanel } from "./outline-panel";
 import { confirmDialog } from "@/components/ui/dialog";
 import {
   AudioFrameIcon,
@@ -272,6 +273,9 @@ export function DocumentEditor({
   const [active, setActive] = useState<ActiveMarks>(EMPTY_ACTIVE);
   const [selectedFigure, setSelectedFigure] = useState<HTMLElement | null>(null);
   const [selectedVideo, setSelectedVideo] = useState<HTMLElement | null>(null);
+
+  // ── Document outline (left-gutter heading list) ───────────────────────────
+  const [outlineOpen, setOutlineOpen] = useState(false);
 
   // ── "Go marco" shorthand mode ─────────────────────────────────────────────
   // A modal formatter: toggle on, select text, type a short code, press Enter.
@@ -1907,6 +1911,14 @@ export function DocumentEditor({
             />
           )}
         </div>
+
+        {/* Document outline — heading list docked in the left gutter (fixed,
+            desktop-only). Doesn't shift the page; toggles independently. */}
+        <OutlinePanel
+          editorRef={editorRef}
+          open={outlineOpen}
+          onToggle={() => setOutlineOpen((o) => !o)}
+        />
 
         {/* Contextual image-editing toolbar (floats over the selected image). */}
         {selectedFigure && (
