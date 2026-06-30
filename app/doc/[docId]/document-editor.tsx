@@ -1357,6 +1357,62 @@ export function DocumentEditor({
         }
       }
 
+      // Backspace at the start of a checklist item. The non-editable [data-check]
+      // box sits at the head of every <li>, so the browser can't merge/delete the
+      // line natively (it refuses to cross the non-editable box) — without this,
+      // checklist items get stuck and can't be removed. Mirror the Enter handler:
+      // merge into the item above, or lift the first item out of the list.
+      if (e.key === "Backspace" && !e.shiftKey) {
+        const sel = window.getSelection();
+        const a = sel?.anchorNode ?? null;
+        const el = a && (a.nodeType === 1 ? (a as HTMLElement) : a.parentElement);
+        const li = el?.closest("li");
+        const ul = li?.parentElement ?? null;
+        if (
+          li &&
+          ul?.hasAttribute("data-checklist") &&
+          sel?.isCollapsed &&
+          sel.rangeCount > 0
+        ) {
+          // Caret is "at the start" when no text precedes it within the item
+          // (the empty check box contributes no text, so it's ignored).
+          const probe = document.createRange();
+          probe.selectNodeContents(li);
+          probe.setEnd(sel.anchorNode!, sel.anchorOffset);
+          if (probe.toString().length === 0) {
+            e.preventDefault();
+            // Everything in the item except its check box moves with it.
+            const movable = Array.from(li.childNodes).filter(
+              (n) => !(n.nodeType === 1 && (n as HTMLElement).matches("[data-check]")),
+            );
+            const prev = li.previousElementSibling;
+            const r = document.createRange();
+            if (prev && prev.tagName === "LI") {
+              // Merge into the item above; caret rests at the join.
+              if (prev.lastChild) r.setStartAfter(prev.lastChild);
+              else r.setStart(prev, 0);
+              r.collapse(true);
+              movable.forEach((n) => prev.appendChild(n));
+              li.remove();
+            } else {
+              // First item → lift it out into a paragraph above the list.
+              const p = document.createElement("p");
+              movable.forEach((n) => p.appendChild(n));
+              if (!p.firstChild) p.appendChild(document.createElement("br"));
+              ul.before(p);
+              li.remove();
+              if (!ul.querySelector("li")) ul.remove();
+              r.setStart(p, 0);
+              r.collapse(true);
+            }
+            sel.removeAllRanges();
+            sel.addRange(r);
+            scheduleSave();
+            return;
+          }
+        }
+      }
+
       // All formatting lives on Ctrl, never Cmd — that keeps Cmd+R/L/E free for
       // the browser (reload, address bar, …) and keeps one consistent modifier.
       // Alignment: Ctrl+L/R/E. Inline marks: Ctrl+B/U/I.

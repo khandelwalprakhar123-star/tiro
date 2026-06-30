@@ -58,3 +58,7 @@ OVERVIEW.md
 .codex/
 .impeccable/
 .claude/skills/
+
+# personal learning / decision notes (kept local, not project code)
+tiro-v1-decisions.md
+tiro-*-decisions.md

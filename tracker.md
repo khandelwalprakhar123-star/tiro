@@ -224,6 +224,15 @@ See the 2026-06-22 changelog entry. **Not yet committed.**
 
 ## Changelog
 
+### 2026-06-30
+- **Checklist Backspace (deletion fix).** Checklist items couldn't be removed with Backspace: each `<li>`
+  starts with a non-editable `[data-check]` box, and native contenteditable refuses to merge/delete a line
+  backwards across a non-editable element at its head, so items got stuck. Added a Backspace handler in
+  `onEditorKeyDown` (`app/doc/[docId]/document-editor.tsx`) mirroring the existing Enter handler: when the
+  caret is at the start of a checklist item, it merges the item up into the one above (empty item just
+  disappears), or — if it's the first item — lifts it out into a `<p>` above the list and drops the `<ul>`
+  when it becomes empty. `tsc --noEmit` clean.
+
 ### 2026-06-28
 - **Document outline / heading sidebar** (left gutter). New client component
   `app/doc/[docId]/outline-panel.tsx` (`<OutlinePanel/>`), mirroring the Marco panel's card styling and
