@@ -31,6 +31,7 @@ import {
 import { FontColorControl } from "./font-color-control";
 import { MarcoShorthandsPanel } from "./marco-shorthands-panel";
 import { OutlinePanel } from "./outline-panel";
+import { WordCountPanel } from "./word-count-panel";
 import { confirmDialog } from "@/components/ui/dialog";
 import {
   AudioFrameIcon,
@@ -41,6 +42,7 @@ import {
   ListIcon,
   PlusIcon,
   TextAlignIcon,
+  ToolsIcon,
   VideoFrameIcon,
 } from "@/components/icons";
 
@@ -276,6 +278,9 @@ export function DocumentEditor({
 
   // ── Document outline (left-gutter heading list) ───────────────────────────
   const [outlineOpen, setOutlineOpen] = useState(false);
+
+  // ── Tools › Word counter (floating, draggable panel) ──────────────────────
+  const [wordCountOpen, setWordCountOpen] = useState(false);
 
   // ── "Go marco" shorthand mode ─────────────────────────────────────────────
   // A modal formatter: toggle on, select text, type a short code, press Enter.
@@ -1927,6 +1932,28 @@ export function DocumentEditor({
           >
             <GoMarcoIcon className="h-6 w-6" />
           </button>
+
+          <span className="mx-1 h-6 w-px bg-line" />
+
+          {/* Tools — utilities dropdown (rightmost). First tool: a word counter
+              that toggles a floating, draggable count panel. */}
+          <ToolbarMenu
+            title="Tools"
+            active={wordCountOpen}
+            trigger={<ToolsIcon className="h-6 w-6" />}
+          >
+            {(close) => (
+              <MenuItem
+                active={wordCountOpen}
+                onClick={() => {
+                  setWordCountOpen((o) => !o);
+                  close();
+                }}
+              >
+                Word count
+              </MenuItem>
+            )}
+          </ToolbarMenu>
         </div>
 
         {/* Body — contenteditable rich text. Wrapped in a relative container.
@@ -2029,6 +2056,14 @@ export function DocumentEditor({
               </span>
             </div>
           </div>
+        )}
+
+        {/* Tools › Word counter — floating, draggable count panel. */}
+        {wordCountOpen && (
+          <WordCountPanel
+            editorRef={editorRef}
+            onClose={() => setWordCountOpen(false)}
+          />
         )}
 
         {/* Publish-to-Web dialog (opened from the ship menu). */}

@@ -224,6 +224,24 @@ See the 2026-06-22 changelog entry. **Not yet committed.**
 
 ## Changelog
 
+### 2026-07-08
+- **Tools menu + Word counter (first tool).** New **"Tools"** toolbar dropdown, placed rightmost (after the
+  Go Marco button, with a `bg-line` divider). Trigger is a new stroke-only **`ToolsIcon`** (wrench) in
+  `components/icons.tsx`. Its first item, **"Word count"**, is a toggle (`wordCountOpen` state in
+  `document-editor.tsx`) — a `MenuItem` with the standard ✓ active tick.
+  - **New `app/doc/[docId]/word-count-panel.tsx`** (`<WordCountPanel/>`, client). A floating, **draggable**,
+    opaque, theme-matched pill (`bg-paper`/`border-line`/`text-ink` + the shared card shadow), **default
+    bottom-centre** (`fixed left-1/2 bottom-6 -translate-x-1/2`). Shows the document's total word count; when
+    a **non-empty selection** exists inside the editor it switches to the **selection's** word count with a
+    "words selected" label. Counting is Google-Docs-style (`text.match(/\S+/g).length`) and **static** — the
+    number is set directly (no 1→N animation). Recomputes on `selectionchange` (document) + `input` (editor);
+    self-contained listeners, so the parent only owns the `wordCountOpen` flag.
+  - **Drag:** pointer-events based. `pos` is `null` until first drag (default placement), then explicit
+    top-left px, clamped fully on-screen. The ✕ close button is `data-no-drag` so clicking it doesn't start a
+    drag; it also calls `onClose` to dismiss the panel (mirrors the toggle).
+  - `tsc --noEmit` + `eslint` clean. Pre-existing `broken-image` comment false-positive (a prose comment
+    mentioning `<img>`) is unrelated. **Not yet browser-verified / committed.**
+
 ### 2026-06-30
 - **Checklist Backspace (deletion fix).** Checklist items couldn't be removed with Backspace: each `<li>`
   starts with a non-editable `[data-check]` box, and native contenteditable refuses to merge/delete a line

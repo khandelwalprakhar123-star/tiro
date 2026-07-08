@@ -383,6 +383,28 @@ export function GoMarcoIcon({ className }: { className?: string }) {
   );
 }
 
+export function ToolsIcon({ className }: { className?: string }) {
+  // Stroke-only wrench — the "Tools" menu trigger.
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden
+      className={className}
+    >
+      <path
+        d="M14.9 6.1a3.8 3.8 0 0 0-5 4.9l-5.4 5.4a1.6 1.6 0 0 0 2.3 2.3l5.4-5.4a3.8 3.8 0 0 0 4.9-5l-2.4 2.4-2.2-.6-.6-2.2 2.4-2.2z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function FolderIcon() {
   return (
     <svg
