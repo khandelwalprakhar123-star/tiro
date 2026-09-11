@@ -224,6 +224,18 @@ See the 2026-06-22 changelog entry. **Not yet committed.**
 
 ## Changelog
 
+### 2026-09-11
+- **README rewritten for portfolio use.** Replaced the untouched `create-next-app` boilerplate `README.md`
+  with a full project README: what Tiro is, a feature tour (auth, workspace/folders/trash, the from-scratch
+  `contenteditable` editor, media embeds, Go Marco, outline/tools, PDF/Markdown export, publish-to-web,
+  Yolk/Innocence theming, landing page), architecture (stack table, request-lifecycle mermaid diagram,
+  data model + RLS, storage layout, content model), the key engineering decisions and *why*, an annotated
+  project tree, local setup (env, migrations, Supabase auth config), deployment notes, and known
+  limitations/roadmap. Every claim was checked against the code/tracker (e.g. filters = grayscale/sepia/
+  contrast, Markdown checklists emit `- [x]`, `images.unoptimized` rationale). Uses
+  `app/opengraph-image.png` as the header image. Notes honestly that the `profiles`/`avatars` migrations
+  are dashboard-only and not in the repo. **Not yet committed.**
+
 ### 2026-07-08
 - **Tools menu + Word counter (first tool).** New **"Tools"** toolbar dropdown, placed rightmost (after the
   Go Marco button, with a `bg-line` divider). Trigger is a new stroke-only **`ToolsIcon`** (wrench) in
